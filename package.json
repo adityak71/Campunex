@@ -11,6 +11,7 @@
     "dev:web": "npm run dev --workspace=apps/web",
     "dev": "concurrently -n \"SERVER,WEB\" -c \"cyan,blue\" \"npm run dev:server\" \"npm run dev:web\"",
     "dev:all": "npm run dev",
+    "clean": "npm run clean --workspace=apps/web",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"

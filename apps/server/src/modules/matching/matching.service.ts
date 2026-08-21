@@ -21,76 +21,112 @@ export async function findMatchingRides(params: SearchMatchParams): Promise<Matc
     max_distance_meters = config.spatial.matchingProximityMeters,
   } = params;
 
-  // Window: +/- 2 hours for departure time filtering if specified, otherwise future rides
+  // Window: If departure_time specified, search +/- 12 hours. Otherwise search all active future/current scheduled rides.
   const targetTime = departure_time ? new Date(departure_time) : new Date();
-  const timeWindowStart = new Date(targetTime.getTime() - 2 * 60 * 60 * 1000).toISOString();
-  const timeWindowEnd = new Date(targetTime.getTime() + 4 * 60 * 60 * 1000).toISOString();
 
-  const query = `
-    SELECT 
-      r.id,
-      r.driver_id,
-      r.origin_name,
-      r.destination_name,
-      ST_Y(r.origin_geom::geometry) AS origin_lat,
-      ST_X(r.origin_geom::geometry) AS origin_lng,
-      ST_Y(r.destination_geom::geometry) AS destination_lat,
-      ST_X(r.destination_geom::geometry) AS destination_lng,
-      ST_AsGeoJSON(r.route_geometry) AS route_geometry,
-      r.departure_time,
-      r.total_seats,
-      r.available_seats,
-      r.status,
-      r.created_at,
-      r.updated_at,
-      u.name AS driver_name,
-      -- Spatial PostGIS Distances in meters
-      ST_Distance(r.route_geometry::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS pickup_route_distance,
-      ST_Distance(r.route_geometry::geography, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography) AS dropoff_route_distance,
-      ST_Distance(r.origin_geom::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS origin_pickup_distance,
-      ST_Distance(r.destination_geom::geography, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography) AS destination_dropoff_distance
-    FROM rides r
-    JOIN users u ON r.driver_id = u.id
-    WHERE r.status = 'SCHEDULED'
-      AND r.available_seats > 0
-      AND r.departure_time BETWEEN $5 AND $6
-      -- PostGIS 500-meter route proximity threshold on pickup AND dropoff
-      AND ST_DWithin(r.route_geometry::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $7)
-      AND ST_DWithin(r.route_geometry::geography, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $7);
-  `;
+  let query: string;
+  let values: any[];
 
-  const values = [
-    pickup_lng,
-    pickup_lat,
-    dropoff_lng,
-    dropoff_lat,
-    timeWindowStart,
-    timeWindowEnd,
-    max_distance_meters,
-  ];
+  if (departure_time) {
+    const timeWindowStart = new Date(targetTime.getTime() - 12 * 60 * 60 * 1000).toISOString();
+    const timeWindowEnd = new Date(targetTime.getTime() + 24 * 60 * 60 * 1000).toISOString();
+
+    query = `
+      SELECT 
+        r.id,
+        r.driver_id,
+        r.origin_name,
+        r.destination_name,
+        ST_Y(r.origin_geom::geometry) AS origin_lat,
+        ST_X(r.origin_geom::geometry) AS origin_lng,
+        ST_Y(r.destination_geom::geometry) AS destination_lat,
+        ST_X(r.destination_geom::geometry) AS destination_lng,
+        ST_AsGeoJSON(r.route_geometry) AS route_geometry,
+        r.departure_time,
+        r.total_seats,
+        r.available_seats,
+        r.status,
+        r.created_at,
+        r.updated_at,
+        u.name AS driver_name,
+        -- Spatial PostGIS Distances in meters
+        ST_Distance(r.route_geometry::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS pickup_route_distance,
+        ST_Distance(r.route_geometry::geography, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography) AS dropoff_route_distance,
+        ST_Distance(r.origin_geom::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS origin_pickup_distance,
+        ST_Distance(r.destination_geom::geography, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography) AS destination_dropoff_distance
+      FROM rides r
+      JOIN users u ON r.driver_id = u.id
+      WHERE r.status = 'SCHEDULED'
+        AND r.available_seats > 0
+        AND r.departure_time BETWEEN $5 AND $6
+        -- PostGIS Proximity Threshold: Pickup within max_distance_meters OR dropoff within max_distance_meters * 3
+        AND (
+          ST_DWithin(r.route_geometry::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $7)
+          OR ST_DWithin(r.origin_geom::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $7 * 2)
+        );
+    `;
+    values = [
+      pickup_lng,
+      pickup_lat,
+      dropoff_lng,
+      dropoff_lat,
+      timeWindowStart,
+      timeWindowEnd,
+      max_distance_meters,
+    ];
+  } else {
+    // Search active scheduled rides
+    query = `
+      SELECT 
+        r.id,
+        r.driver_id,
+        r.origin_name,
+        r.destination_name,
+        ST_Y(r.origin_geom::geometry) AS origin_lat,
+        ST_X(r.origin_geom::geometry) AS origin_lng,
+        ST_Y(r.destination_geom::geometry) AS destination_lat,
+        ST_X(r.destination_geom::geometry) AS destination_lng,
+        ST_AsGeoJSON(r.route_geometry) AS route_geometry,
+        r.departure_time,
+        r.total_seats,
+        r.available_seats,
+        r.status,
+        r.created_at,
+        r.updated_at,
+        u.name AS driver_name,
+        -- Spatial PostGIS Distances in meters
+        ST_Distance(r.route_geometry::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS pickup_route_distance,
+        ST_Distance(r.route_geometry::geography, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography) AS dropoff_route_distance,
+        ST_Distance(r.origin_geom::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS origin_pickup_distance,
+        ST_Distance(r.destination_geom::geography, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography) AS destination_dropoff_distance
+      FROM rides r
+      JOIN users u ON r.driver_id = u.id
+      WHERE r.status = 'SCHEDULED'
+        AND r.available_seats > 0
+        -- PostGIS Proximity Threshold
+        AND (
+          ST_DWithin(r.route_geometry::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $5)
+          OR ST_DWithin(r.origin_geom::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $5 * 3)
+        );
+    `;
+    values = [pickup_lng, pickup_lat, dropoff_lng, dropoff_lat, max_distance_meters];
+  }
 
   const res = await pool.query(query, values);
 
   const results: MatchResult[] = res.rows.map((row) => {
-    const pickupRouteDist = parseFloat(row.pickup_route_distance);
-    const dropoffRouteDist = parseFloat(row.dropoff_route_distance);
-    const originPickupDist = parseFloat(row.origin_pickup_distance);
-    const destDropoffDist = parseFloat(row.destination_dropoff_distance);
+    const pickupRouteDist = parseFloat(row.pickup_route_distance) || 0;
+    const dropoffRouteDist = parseFloat(row.dropoff_route_distance) || 0;
+    const originPickupDist = parseFloat(row.origin_pickup_distance) || 0;
+    const destDropoffDist = parseFloat(row.destination_dropoff_distance) || 0;
 
     const rideTime = new Date(row.departure_time).getTime();
     const timeDiffMinutes = Math.abs(rideTime - targetTime.getTime()) / (1000 * 60);
 
     // Scoring Breakdown Matrix (0 - 100)
-    // 1. Route Compatibility (40%) - proximity of pickup & dropoff to route line (within 500m)
     const routeScore = Math.max(0, 100 - (pickupRouteDist + dropoffRouteDist) / 10);
-
-    // 2. Pickup Proximity (30%) - distance between rider pickup and driver origin
     const pickupScore = Math.max(0, 100 - originPickupDist / 20);
-
-    // 3. Destination Proximity (20%) - distance between rider dropoff and driver destination
     const destScore = Math.max(0, 100 - destDropoffDist / 20);
-
-    // 4. Time Compatibility (10%) - closeness of departure time
     const timeScore = Math.max(0, 100 - timeDiffMinutes * 2);
 
     const matchScore = Math.round(
