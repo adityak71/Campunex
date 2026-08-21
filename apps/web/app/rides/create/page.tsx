@@ -3,15 +3,18 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../../components/Navbar';
+import LocationPicker from '../../../components/LocationPicker';
 import { apiRequest } from '../../../lib/api';
 
 export default function CreateRidePage() {
   const [originName, setOriginName] = useState('LPU Main Gate');
-  const [destName, setDestName] = useState('Jalandhar City Railway Station');
   const [originLat, setOriginLat] = useState('31.2536');
   const [originLng, setOriginLng] = useState('75.7037');
+
+  const [destName, setDestName] = useState('Jalandhar City Railway Station');
   const [destLat, setDestLat] = useState('31.3260');
   const [destLng, setDestLng] = useState('75.5762');
+
   const [departureTime, setDepartureTime] = useState(
     new Date(Date.now() + 3600000).toISOString().slice(0, 16)
   );
@@ -57,7 +60,7 @@ export default function CreateRidePage() {
             Publish New Campus Ride
           </h1>
           <p className="text-sm text-slate-400">
-            Coordinates are automatically converted into PostGIS GEOMETRY(LineString, 4326) routes
+            Type address or landmark — latitude and longitude coordinates are automatically fetched and saved in PostGIS
           </p>
         </div>
 
@@ -68,76 +71,38 @@ export default function CreateRidePage() {
         )}
 
         <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold text-cyan-400 uppercase tracking-wider">1. Route Details</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Origin Landmark Name</label>
-                <input
-                  type="text"
-                  required
-                  value={originName}
-                  onChange={(e) => setOriginName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Destination Landmark Name</label>
-                <input
-                  type="text"
-                  required
-                  value={destName}
-                  onChange={(e) => setDestName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm"
-                />
-              </div>
-            </div>
+          <div className="space-y-6">
+            <h2 className="text-sm font-bold text-cyan-400 uppercase tracking-wider">1. Route Location Autocomplete</h2>
+            
+            <LocationPicker
+              label="Departure Origin Address / Landmark"
+              placeholder="Type departure location (e.g., LPU Main Gate, Phagwara)..."
+              initialName={originName}
+              initialLat={originLat}
+              initialLng={originLng}
+              onSelectLocation={(name, lat, lng) => {
+                setOriginName(name);
+                setOriginLat(lat.toString());
+                setOriginLng(lng.toString());
+              }}
+            />
+
+            <LocationPicker
+              label="Destination Address / Landmark"
+              placeholder="Type destination location (e.g., Jalandhar City Railway Station)..."
+              initialName={destName}
+              initialLat={destLat}
+              initialLng={destLng}
+              onSelectLocation={(name, lat, lng) => {
+                setDestName(name);
+                setDestLat(lat.toString());
+                setDestLng(lng.toString());
+              }}
+            />
           </div>
 
           <div className="space-y-4 pt-4 border-t border-slate-800">
-            <h2 className="text-sm font-bold text-cyan-400 uppercase tracking-wider">2. PostGIS Spatial Coordinates</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono text-xs">
-              <div>
-                <label className="block text-slate-400 mb-1">Origin Lat</label>
-                <input
-                  type="text"
-                  value={originLat}
-                  onChange={(e) => setOriginLat(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-400 mb-1">Origin Lng</label>
-                <input
-                  type="text"
-                  value={originLng}
-                  onChange={(e) => setOriginLng(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-400 mb-1">Dest Lat</label>
-                <input
-                  type="text"
-                  value={destLat}
-                  onChange={(e) => setDestLat(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-400 mb-1">Dest Lng</label>
-                <input
-                  type="text"
-                  value={destLng}
-                  onChange={(e) => setDestLng(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded text-white"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4 pt-4 border-t border-slate-800">
-            <h2 className="text-sm font-bold text-cyan-400 uppercase tracking-wider">3. Schedule & Capacity</h2>
+            <h2 className="text-sm font-bold text-cyan-400 uppercase tracking-wider">2. Schedule & Capacity</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1">Departure Time</label>

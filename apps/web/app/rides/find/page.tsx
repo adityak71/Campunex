@@ -3,16 +3,20 @@
 import React, { useState } from 'react';
 import Navbar from '../../../components/Navbar';
 import Map from '../../../components/Map';
+import LocationPicker from '../../../components/LocationPicker';
 import { apiRequest } from '../../../lib/api';
 import { MatchResult } from '@campunex/shared';
 
 export default function FindRidePage() {
+  const [pickupName, setPickupName] = useState('LPU Main Gate');
   const [pickupLat, setPickupLat] = useState('31.2540');
   const [pickupLng, setPickupLng] = useState('75.7030');
+
+  const [dropoffName, setDropoffName] = useState('Jalandhar City Railway Station');
   const [dropoffLat, setDropoffLat] = useState('31.3255');
   const [dropoffLng, setDropoffLng] = useState('75.5768');
-  const [maxDistance, setMaxDistance] = useState('500');
 
+  const [maxDistance] = useState('500');
   const [matches, setMatches] = useState<MatchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [requestStatus, setRequestStatus] = useState<string | null>(null);
@@ -62,55 +66,44 @@ export default function FindRidePage() {
             Find Campus Rides
           </h1>
           <p className="text-sm text-slate-400">
-            PostGIS calculates spatial route line overlaps within a 500-meter proximity threshold
+            Search any address or landmark — latitude & longitude coordinates are automatically resolved
           </p>
         </div>
 
-        {/* Search Parameters Form */}
-        <form onSubmit={handleSearch} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Pickup Latitude</label>
-              <input
-                type="text"
-                value={pickupLat}
-                onChange={(e) => setPickupLat(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm font-mono"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Pickup Longitude</label>
-              <input
-                type="text"
-                value={pickupLng}
-                onChange={(e) => setPickupLng(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm font-mono"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Dropoff Latitude</label>
-              <input
-                type="text"
-                value={dropoffLat}
-                onChange={(e) => setDropoffLat(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm font-mono"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Dropoff Longitude</label>
-              <input
-                type="text"
-                value={dropoffLng}
-                onChange={(e) => setDropoffLng(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm font-mono"
-              />
-            </div>
+        {/* Search Parameters Form with Address Autocomplete */}
+        <form onSubmit={handleSearch} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <LocationPicker
+              label="1. Pickup Address / Landmark"
+              placeholder="Type campus pickup location (e.g., LPU Main Gate)..."
+              initialName={pickupName}
+              initialLat={pickupLat}
+              initialLng={pickupLng}
+              onSelectLocation={(name, lat, lng) => {
+                setPickupName(name);
+                setPickupLat(lat.toString());
+                setPickupLng(lng.toString());
+              }}
+            />
+
+            <LocationPicker
+              label="2. Dropoff Address / Destination"
+              placeholder="Type campus dropoff location (e.g., Jalandhar Railway Station)..."
+              initialName={dropoffName}
+              initialLat={dropoffLat}
+              initialLng={dropoffLng}
+              onSelectLocation={(name, lat, lng) => {
+                setDropoffName(name);
+                setDropoffLat(lat.toString());
+                setDropoffLng(lng.toString());
+              }}
+            />
           </div>
 
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center justify-between pt-2 border-t border-slate-800">
             <div className="flex items-center space-x-2 text-xs text-slate-400">
               <span>Proximity Threshold:</span>
-              <span className="font-bold text-cyan-400">{maxDistance} meters</span>
+              <span className="font-bold text-cyan-400">500 meters (PostGIS LineString Overlap)</span>
             </div>
             <button
               type="submit"
@@ -137,7 +130,7 @@ export default function FindRidePage() {
           {matches.length === 0 ? (
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-400 space-y-3">
               <p className="text-base font-semibold">No driver route overlap found within 500m threshold.</p>
-              <p className="text-xs text-slate-500">Click "Search Matching Rides" above to query available driver routes.</p>
+              <p className="text-xs text-slate-500">Select your pickup & dropoff addresses above to query active driver routes.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
