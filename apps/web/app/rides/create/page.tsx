@@ -65,7 +65,7 @@ export default function CreateRidePage() {
             Offer a Campus Ride
           </h1>
           <p className="text-xs text-slate-500">
-            Type address or landmark — latitude and longitude coordinates auto-fetch into PostGIS route geometries
+            Type address or landmark — latitude and longitude coordinates auto-fetch for route matching
           </p>
         </div>
 
@@ -138,7 +138,7 @@ export default function CreateRidePage() {
             disabled={loading}
             className="w-full py-3 bg-[#1e3a8a] hover:bg-[#1d3271] text-white font-bold rounded-xl shadow-md transition disabled:opacity-50 text-sm flex items-center justify-center gap-2"
           >
-            {loading ? 'Publishing Ride to PostGIS...' : 'Offer Campus Ride'} <ArrowRight className="w-4 h-4" />
+            {loading ? 'Publishing Campus Ride...' : 'Offer Campus Ride'} <ArrowRight className="w-4 h-4" />
           </button>
         </form>
       </main>

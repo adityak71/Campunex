@@ -55,16 +55,11 @@ export default function DashboardPage() {
         {/* Welcome Banner */}
         <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl md:text-3xl font-extrabold text-[#1e3a8a] tracking-tight">
-                Welcome back, {user?.name} 👋
-              </h1>
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#e0f2fe] text-[#1e3a8a] border border-[#bae6fd]">
-                {user?.role}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Campus Ride-Matching Platform • PostGIS 500m Spatial Engine
+            <h1 className="text-2xl font-bold text-[#1e3a8a] flex items-center gap-2">
+              Hello, {user?.name}! <span className="text-[#14b8a6]">👋</span>
+            </h1>
+            <p className="text-xs text-slate-500">
+              Campus Ride-Matching Platform • Smart Route Matching
             </p>
           </div>
 

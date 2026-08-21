@@ -19,7 +19,7 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-sm leading-relaxed text-slate-400">
-              Campus ride-matching platform for verified university students. PostGIS 500m proximity algorithm & dual OTP security.
+              Campus ride-matching platform for verified university students. Smart route matching algorithm & dual OTP security.
             </p>
             <p className="text-xs mt-4 text-slate-500">© 2026 Campunex. All rights reserved.</p>
           </div>
@@ -44,7 +44,7 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="text-white font-semibold text-sm mb-3">PostGIS & Security</h4>
+            <h4 className="text-white font-semibold text-sm mb-3">Matching & Security</h4>
             <ul className="space-y-2 text-sm">
               <li><span className="text-slate-400">500m Proximity Threshold</span></li>
               <li><span className="text-slate-400">Dual 4-Digit OTP Hashes</span></li>
@@ -60,7 +60,7 @@ export default function Footer() {
               ✓ Verified Platform
             </span>
             <span className="bg-blue-950/60 text-blue-400 border border-blue-800/80 px-2.5 py-1 rounded-full font-semibold">
-              PostGIS 500m Engine
+              Smart Route Matching
             </span>
           </div>
         </div>

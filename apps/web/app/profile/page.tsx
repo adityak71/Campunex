@@ -114,7 +114,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-teal-600" />
-                  <span>PostGIS 500m Proximity Shield</span>
+                  <span>500m Route Proximity Shield</span>
                 </div>
               </div>
             </div>

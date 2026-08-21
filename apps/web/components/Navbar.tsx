@@ -53,7 +53,7 @@ export default function Navbar() {
             Camp<span className="text-[#14b8a6] dark:text-cyan-300">unex</span>
           </span>
           <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#e0f2fe] dark:bg-cyan-950/80 text-[#1e3a8a] dark:text-cyan-300 border border-[#bae6fd] dark:border-cyan-800">
-            500m PostGIS
+            Verified Commute
           </span>
         </Link>
 

@@ -52,7 +52,7 @@ export default function LoginPage() {
               Welcome Back to Campunex
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Sign in to access your campus rides & 500m PostGIS matching
+              Sign in to access your campus rides & smart route matching
             </p>
           </div>
 
