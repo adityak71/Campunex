@@ -10,6 +10,7 @@ import { checkRedisConnection } from './config/redis.js';
 import { runMigrations } from './db/migrate.js';
 import { runSeeds } from './db/seed.js';
 import authRoutes from './routes/auth.routes.js';
+import ridesRoutes from './routes/rides.routes.js';
 import { HealthCheckResponse } from '@campunex/shared';
 
 const app = express();
@@ -36,6 +37,7 @@ app.use(cookieParser());
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/rides', ridesRoutes);
 
 // Health Check Endpoint
 app.get('/health', async (_req, res) => {
