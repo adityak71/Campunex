@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: campunex_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: campunex_db
+      POSTGRES_USER: campunex_user
+      POSTGRES_PASSWORD: campunex_password
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-postgis.sql:/docker-entrypoint-initdb.d/01-init-postgis.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U campunex_user -d campunex_db']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: campunex_redis
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
