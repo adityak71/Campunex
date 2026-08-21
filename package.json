@@ -9,12 +9,14 @@
   "scripts": {
     "dev:server": "npm run dev --workspace=apps/server",
     "dev:web": "npm run dev --workspace=apps/web",
-    "dev": "npm run dev:server",
+    "dev": "concurrently -n \"SERVER,WEB\" -c \"cyan,blue\" \"npm run dev:server\" \"npm run dev:web\"",
+    "dev:all": "npm run dev",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "typescript": "^5.4.5"
   }
 }
