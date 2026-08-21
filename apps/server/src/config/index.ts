@@ -1,13 +1,25 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load root .env
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+// Search paths for .env
+const candidateEnvPaths = [
+  path.resolve(process.cwd(), '.env'),
+  path.resolve(process.cwd(), '../../.env'),
+  path.resolve(__dirname, '../../../.env'),
+  path.resolve(__dirname, '../../../../.env'),
+  path.resolve(__dirname, '../../.env'),
+];
+
+for (const envPath of candidateEnvPaths) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+  }
+}
 
 export const config = {
   env: process.env.NODE_ENV || 'development',
@@ -16,10 +28,10 @@ export const config = {
   db: {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5432', 10),
-    name: process.env.DB_NAME || 'campunex_db',
-    user: process.env.DB_USER || 'campunex_user',
-    password: process.env.DB_PASSWORD || 'campunex_password',
-    url: process.env.DATABASE_URL || 'postgres://campunex_user:campunex_password@localhost:5432/campunex_db',
+    name: process.env.DB_NAME || 'campunex',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'Aditya@2005',
+    url: process.env.DATABASE_URL || 'postgres://postgres:Aditya@2005@localhost:5432/campunex',
   },
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
@@ -27,7 +39,7 @@ export const config = {
     password: process.env.REDIS_PASSWORD || undefined,
   },
   jwt: {
-    secret: process.env.JWT_SECRET || 'fallback-secret-key-change-in-production',
+    secret: process.env.JWT_SECRET || 'super-secret-campunex-jwt-token-key-change-in-production',
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
   spatial: {
@@ -38,6 +50,6 @@ export const config = {
     maxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS || '3', 10),
   },
   dev: {
-    enableSimulator: process.env.ENABLE_DEV_SIMULATOR === 'true',
+    enableSimulator: process.env.ENABLE_DEV_SIMULATOR !== 'false',
   },
 };
