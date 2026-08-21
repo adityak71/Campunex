@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
 import { apiRequest } from '../../lib/api';
+import { Shield, KeyRound, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export default function VerifyPage() {
   const [otp, setOtp] = useState('');
@@ -43,35 +45,36 @@ export default function VerifyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       <Navbar />
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl space-y-6">
+
+      <div className="flex-1 flex items-center justify-center p-4 py-12">
+        <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-8 shadow-xl space-y-6">
           <div className="text-center space-y-2">
-            <div className="w-12 h-12 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800 flex items-center justify-center mx-auto text-xl">
-              🎓
+            <div className="w-12 h-12 bg-teal-50 border border-teal-200 rounded-2xl flex items-center justify-center mx-auto text-teal-600">
+              <Shield className="w-6 h-6" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
-              Verify Institutional Identity
+            <h1 className="text-2xl font-bold text-[#1e3a8a] tracking-tight">
+              Verify Campus Email
             </h1>
-            <p className="text-sm text-slate-400">
-              Enter the 6-digit verification code sent to your campus email
+            <p className="text-xs text-slate-500">
+              Enter the 6-digit verification code sent to your campus email address
             </p>
           </div>
 
           {error && (
-            <div className="p-3 bg-rose-950/80 border border-rose-800 rounded-lg text-rose-300 text-xs font-medium">
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-semibold">
               {error}
             </div>
           )}
 
           {devOtpHint && (
-            <div className="p-3 bg-cyan-950/60 border border-cyan-800 rounded-lg text-cyan-300 text-xs flex justify-between items-center">
-              <span>Dev OTP Hint: <strong>{devOtpHint}</strong></span>
+            <div className="p-3 bg-[#e0f2fe]/60 border border-[#bae6fd] rounded-xl text-xs flex justify-between items-center text-[#1e3a8a]">
+              <span>Dev Verification OTP: <strong>{devOtpHint}</strong></span>
               <button
                 type="button"
                 onClick={() => setOtp(devOtpHint)}
-                className="px-2 py-0.5 bg-cyan-800 hover:bg-cyan-700 text-white rounded text-[10px] font-bold"
+                className="px-2.5 py-1 bg-[#1e3a8a] hover:bg-[#1d3271] text-white rounded-lg text-[10px] font-bold shadow-sm"
               >
                 Auto Fill
               </button>
@@ -80,7 +83,7 @@ export default function VerifyPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-2 text-center">
+              <label className="block text-xs font-bold text-slate-700 mb-2 text-center">
                 6-Digit Verification Code
               </label>
               <input
@@ -89,7 +92,7 @@ export default function VerifyPage() {
                 required
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-center text-2xl font-mono tracking-[0.5em] focus:outline-none focus:border-cyan-500 transition"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-center text-2xl font-mono tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition"
                 placeholder="123456"
               />
             </div>
@@ -97,13 +100,15 @@ export default function VerifyPage() {
             <button
               type="submit"
               disabled={loading || otp.length !== 6}
-              className="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold rounded-xl shadow-lg transition disabled:opacity-50 text-sm"
+              className="w-full py-3 bg-[#1e3a8a] hover:bg-[#1d3271] text-white font-bold rounded-xl shadow-md transition disabled:opacity-50 text-sm flex items-center justify-center gap-2"
             >
-              {loading ? 'Verifying...' : 'Verify Campus Identity'}
+              {loading ? 'Verifying...' : 'Verify Campus Identity'} <CheckCircle2 className="w-4 h-4" />
             </button>
           </form>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 }

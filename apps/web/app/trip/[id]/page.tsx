@@ -3,10 +3,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Navbar from '../../../components/Navbar';
+import Footer from '../../../components/Footer';
 import Map from '../../../components/Map';
 import { apiRequest } from '../../../lib/api';
 import { getSocketClient } from '../../../lib/socket';
 import { GeoPoint, TripStatus, User } from '@campunex/shared';
+import { Navigation2, ShieldCheck, Lock, Play, Wifi, CheckCircle2, User as UserIcon, KeyRound } from 'lucide-react';
 
 export default function TripLivePage() {
   const params = useParams();
@@ -65,18 +67,15 @@ export default function TripLivePage() {
       setConnectionState('RECONNECTING');
     });
 
-    // Listen for live driver GPS location updates
     socket.on('trip:location_update', (data: { latitude: number; longitude: number }) => {
       setDriverLocation({ latitude: data.latitude, longitude: data.longitude });
     });
 
-    // Listen for OTP generation (Plain OTP delivered securely to Rider)
     socket.on('trip:otp_generated', (data: { otp: string; type: 'START' | 'COMPLETION' }) => {
       setReceivedOtp(data.otp);
       setOtpMessage(`🔑 ${data.type} OTP Code for Driver: ${data.otp}`);
     });
 
-    // Listen for Trip status transitions
     socket.on('trip:status_change', (data: { status: TripStatus }) => {
       setTripStatus(data.status);
     });
@@ -89,7 +88,6 @@ export default function TripLivePage() {
 
   const isDriver = currentUser?.role === 'DRIVER' || trip?.driver_id === currentUser?.id;
 
-  // Driver requests Start OTP
   const handleRequestStartOtp = async () => {
     try {
       const res = await apiRequest(`/trips/${tripId}/start-otp`, { method: 'POST' });
@@ -100,7 +98,6 @@ export default function TripLivePage() {
     }
   };
 
-  // Driver submits 4-digit Start OTP
   const handleVerifyStartOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -116,7 +113,6 @@ export default function TripLivePage() {
     }
   };
 
-  // Driver requests Completion OTP
   const handleRequestCompletionOtp = async () => {
     try {
       const res = await apiRequest(`/trips/${tripId}/completion-otp`, { method: 'POST' });
@@ -127,7 +123,6 @@ export default function TripLivePage() {
     }
   };
 
-  // Driver submits 4-digit Completion OTP
   const handleVerifyCompletionOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -143,7 +138,6 @@ export default function TripLivePage() {
     }
   };
 
-  // Trigger Dev GPS Simulator
   const handleStartDevSimulation = async () => {
     setSimulating(true);
     try {
@@ -158,10 +152,10 @@ export default function TripLivePage() {
 
   if (loading || !trip) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
         <Navbar />
         <div className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-400"></div>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1e3a8a]"></div>
         </div>
       </div>
     );
@@ -171,62 +165,59 @@ export default function TripLivePage() {
   const destPoint = { latitude: parseFloat(trip.destination_lat), longitude: parseFloat(trip.destination_lng) };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 space-y-6">
-        {/* Header Bar */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 space-y-6 w-full">
+        {/* Live Header Bar */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
           <div>
-            <div className="flex items-center space-x-3">
-              <h1 className="text-2xl font-bold tracking-tight text-white">
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl md:text-2xl font-extrabold text-[#1e3a8a]">
                 {trip.origin_name} ➔ {trip.destination_name}
               </h1>
               <span
                 className={`px-3 py-1 rounded-full text-xs font-bold ${
                   tripStatus === 'COMPLETED'
-                    ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                    : tripStatus === 'IN_PROGRESS' || tripStatus === 'STARTED'
-                    ? 'bg-cyan-950 text-cyan-400 border border-cyan-800 animate-pulse'
-                    : 'bg-slate-800 text-slate-300'
+                    ? 'bg-teal-50 text-teal-700 border border-teal-200'
+                    : 'bg-[#e0f2fe] text-[#1e3a8a] border border-[#bae6fd] animate-pulse'
                 }`}
               >
                 STATUS: {tripStatus}
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               Driver: <strong>{trip.driver_name}</strong> | Rider: <strong>{trip.rider_name}</strong>
             </p>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-3">
             <span
-              className={`px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1.5 ${
+              className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
                 connectionState === 'CONNECTED'
-                  ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                  : 'bg-amber-950 text-amber-400 border border-amber-800 animate-pulse'
+                  ? 'bg-teal-50 text-teal-700 border border-teal-200'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-current"></span>
+              <Wifi className="w-3.5 h-3.5" />
               <span>WebSocket: {connectionState}</span>
             </span>
 
-            {/* Dev GPS Simulator Button */}
             <button
               onClick={handleStartDevSimulation}
               disabled={simulating}
-              className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-400 font-bold rounded-lg text-xs transition shadow"
+              className="px-3.5 py-1.5 bg-[#1e3a8a] hover:bg-[#1d3271] text-white font-bold rounded-xl text-xs transition shadow-sm flex items-center gap-1"
             >
-              {simulating ? 'Simulating...' : '▶ Dev GPS Simulator'}
+              <Play className="w-3.5 h-3.5 text-teal-300" /> {simulating ? 'Simulating...' : '▶ Dev GPS Simulator'}
             </button>
           </div>
         </div>
 
-        {/* Live Leaflet Map Container */}
+        {/* Map Container */}
         <div className="space-y-2">
-          <div className="flex justify-between items-center text-xs text-slate-400">
-            <span>🗺️ Live Driver GPS Location Tracking</span>
-            <span>Update Interval: 2s (Redis Ephemeral Cache)</span>
+          <div className="flex justify-between items-center text-xs text-slate-500">
+            <span>🗺️ Live Driver GPS Location Tracking (Socket.IO + Redis Cache)</span>
+            <span className="font-bold text-teal-600">Real-Time Coordinate Stream</span>
           </div>
           <Map
             origin={originPoint}
@@ -237,42 +228,42 @@ export default function TripLivePage() {
           />
         </div>
 
-        {/* Dual OTP & Control Panel */}
+        {/* Dual OTP & Control Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* OTP Security Box */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h2 className="text-sm font-bold text-cyan-400 uppercase tracking-wider">
-                🔐 Dual OTP Ride Verification Security
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h2 className="text-xs font-bold text-[#1e3a8a] uppercase tracking-wider flex items-center gap-1.5">
+                <Lock className="w-4 h-4 text-teal-600" /> Dual OTP Ride Verification Security
               </h2>
-              <span className="text-[10px] text-slate-500">4-Digit Redis Hash Verification</span>
+              <span className="text-[10px] text-slate-400">4-Digit Redis Hash</span>
             </div>
 
             {otpMessage && (
-              <div className="p-3 bg-cyan-950/80 border border-cyan-800 rounded-xl text-cyan-300 text-xs font-bold space-y-1">
+              <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-teal-800 text-xs font-bold space-y-1">
                 <div>{otpMessage}</div>
                 {receivedOtp && (
-                  <div className="text-lg font-mono tracking-widest text-emerald-400 mt-1">
+                  <div className="text-xl font-mono tracking-widest text-[#1e3a8a] mt-1">
                     Plain OTP: {receivedOtp}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Rider View: Show Plain OTP Code */}
+            {/* Rider View */}
             {!isDriver && (
-              <div className="space-y-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <div className="text-xs font-semibold text-slate-300">Rider OTP Security Badge:</div>
+              <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <div className="text-xs font-bold text-slate-700">Rider Security Code Badge:</div>
                 {receivedOtp ? (
-                  <div className="text-center p-4 bg-emerald-950/40 border border-emerald-800/80 rounded-xl space-y-1">
-                    <div className="text-xs text-emerald-300">Share this code with your Driver:</div>
-                    <div className="text-3xl font-mono font-extrabold tracking-widest text-emerald-400">
+                  <div className="text-center p-4 bg-white border border-teal-200 rounded-xl space-y-1 shadow-sm">
+                    <div className="text-xs text-teal-700 font-semibold">Share this code with your Driver:</div>
+                    <div className="text-3xl font-mono font-extrabold tracking-widest text-[#1e3a8a]">
                       {receivedOtp}
                     </div>
                   </div>
                 ) : (
                   <div className="text-xs text-slate-400 text-center py-4">
-                    Waiting for driver to initiate Start or Completion OTP stage...
+                    Waiting for driver to initiate Start or Completion OTP verification...
                   </div>
                 )}
               </div>
@@ -281,14 +272,13 @@ export default function TripLivePage() {
             {/* Driver Controls */}
             {isDriver && (
               <div className="space-y-4">
-                {/* Stage 1: Start OTP */}
                 {['ACCEPTED', 'OTP_PENDING'].includes(tripStatus) && (
-                  <div className="space-y-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
+                  <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-slate-200">1. Initiation OTP Verification</span>
+                      <span className="text-xs font-bold text-slate-800">1. Initiation OTP Verification</span>
                       <button
                         onClick={handleRequestStartOtp}
-                        className="px-3 py-1 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded text-xs transition"
+                        className="px-3 py-1 bg-[#1e3a8a] hover:bg-[#1d3271] text-white font-bold rounded-lg text-xs transition shadow-sm"
                       >
                         Request Rider OTP
                       </button>
@@ -302,27 +292,26 @@ export default function TripLivePage() {
                         value={otpInput}
                         onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
                         placeholder="4-digit OTP"
-                        className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono text-center text-sm font-bold tracking-widest"
+                        className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 font-mono text-center text-sm font-bold tracking-widest"
                       />
                       <button
                         type="submit"
                         disabled={otpInput.length !== 4}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition disabled:opacity-50"
+                        className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs transition shadow-sm disabled:opacity-50"
                       >
-                        Verify & Start Trip
+                        Verify & Start
                       </button>
                     </form>
                   </div>
                 )}
 
-                {/* Stage 2: Completion OTP */}
                 {['STARTED', 'IN_PROGRESS', 'COMPLETION_PENDING'].includes(tripStatus) && (
-                  <div className="space-y-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
+                  <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-slate-200">2. Completion OTP Verification</span>
+                      <span className="text-xs font-bold text-slate-800">2. Completion OTP Verification</span>
                       <button
                         onClick={handleRequestCompletionOtp}
-                        className="px-3 py-1 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded text-xs transition"
+                        className="px-3 py-1 bg-[#1e3a8a] hover:bg-[#1d3271] text-white font-bold rounded-lg text-xs transition shadow-sm"
                       >
                         Request Rider OTP
                       </button>
@@ -336,22 +325,22 @@ export default function TripLivePage() {
                         value={otpInput}
                         onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
                         placeholder="4-digit OTP"
-                        className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono text-center text-sm font-bold tracking-widest"
+                        className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 font-mono text-center text-sm font-bold tracking-widest"
                       />
                       <button
                         type="submit"
                         disabled={otpInput.length !== 4}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition disabled:opacity-50"
+                        className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs transition shadow-sm disabled:opacity-50"
                       >
-                        Verify & Complete Trip
+                        Verify & Complete
                       </button>
                     </form>
                   </div>
                 )}
 
                 {tripStatus === 'COMPLETED' && (
-                  <div className="p-4 bg-emerald-950/60 border border-emerald-800 rounded-xl text-emerald-300 text-xs font-bold text-center">
-                    🎉 Trip Completed Successfully! Record permanently persisted in PostgreSQL.
+                  <div className="p-4 bg-teal-50 border border-teal-200 rounded-xl text-teal-800 text-xs font-bold text-center">
+                    🎉 Trip Completed Successfully! Record permanently saved in PostgreSQL.
                   </div>
                 )}
               </div>
@@ -359,38 +348,40 @@ export default function TripLivePage() {
           </div>
 
           {/* Trip Summary Box */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl text-xs">
-            <div className="border-b border-slate-800 pb-3">
-              <h2 className="text-sm font-bold text-cyan-400 uppercase tracking-wider">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm text-xs">
+            <div className="border-b border-slate-100 pb-3">
+              <h2 className="text-xs font-bold text-[#1e3a8a] uppercase tracking-wider">
                 📋 Trip Summary Details
               </h2>
             </div>
 
-            <div className="space-y-2 text-slate-300">
-              <div className="flex justify-between py-1 border-b border-slate-800/50">
+            <div className="space-y-2 text-slate-600">
+              <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-400">Trip ID:</span>
-                <span className="font-mono text-slate-200">{trip.id}</span>
+                <span className="font-mono font-bold text-slate-800">{trip.id}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-slate-800/50">
-                <span className="text-slate-400">Driver:</span>
-                <span className="font-semibold text-white">{trip.driver_name}</span>
+              <div className="flex justify-between py-1 border-b border-slate-100">
+                <span className="text-slate-400">Driver Name:</span>
+                <span className="font-bold text-slate-900">{trip.driver_name}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-slate-800/50">
-                <span className="text-slate-400">Rider:</span>
-                <span className="font-semibold text-white">{trip.rider_name}</span>
+              <div className="flex justify-between py-1 border-b border-slate-100">
+                <span className="text-slate-400">Rider Name:</span>
+                <span className="font-bold text-slate-900">{trip.rider_name}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-slate-800/50">
-                <span className="text-slate-400">Origin:</span>
-                <span className="font-semibold text-white">{trip.origin_name}</span>
+              <div className="flex justify-between py-1 border-b border-slate-100">
+                <span className="text-slate-400">Departure Location:</span>
+                <span className="font-bold text-slate-900">{trip.origin_name}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-slate-800/50">
-                <span className="text-slate-400">Destination:</span>
-                <span className="font-semibold text-white">{trip.destination_name}</span>
+              <div className="flex justify-between py-1 border-b border-slate-100">
+                <span className="text-slate-400">Destination Location:</span>
+                <span className="font-bold text-slate-900">{trip.destination_name}</span>
               </div>
             </div>
           </div>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }

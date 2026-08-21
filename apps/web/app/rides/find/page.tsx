@@ -2,10 +2,26 @@
 
 import React, { useState } from 'react';
 import Navbar from '../../../components/Navbar';
+import Footer from '../../../components/Footer';
 import Map from '../../../components/Map';
 import LocationPicker from '../../../components/LocationPicker';
 import { apiRequest } from '../../../lib/api';
 import { MatchResult } from '@campunex/shared';
+import { Navigation2, Search, Star, ShieldCheck, Car, CheckCircle2, ChevronRight } from 'lucide-react';
+
+function MatchBar({ percent }: { percent: number }) {
+  const color = percent >= 90 ? 'bg-teal-500' : percent >= 75 ? 'bg-blue-500' : 'bg-amber-500';
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+        <div className={`h-1.5 rounded-full transition-all ${color}`} style={{ width: `${percent}%` }} />
+      </div>
+      <span className={`text-xs font-bold tabular-nums ${percent >= 90 ? 'text-teal-600' : percent >= 75 ? 'text-blue-600' : 'text-amber-600'}`}>
+        {percent}%
+      </span>
+    </div>
+  );
+}
 
 export default function FindRidePage() {
   const [pickupName, setPickupName] = useState('LPU Main Gate');
@@ -54,24 +70,24 @@ export default function FindRidePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-8 w-full">
         <div className="space-y-2">
-          <div className="inline-block px-3 py-1 bg-cyan-950 text-cyan-400 border border-cyan-800 rounded-full text-xs font-bold">
-            POSTGIS 500m SPATIAL ENGINE
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#e0f2fe] text-[#1e3a8a] border border-[#bae6fd] rounded-full text-xs font-bold">
+            <Navigation2 className="w-3.5 h-3.5" /> POSTGIS 500m SPATIAL ENGINE
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
+          <h1 className="text-3xl font-extrabold text-[#1e3a8a] tracking-tight">
             Find Campus Rides
           </h1>
-          <p className="text-sm text-slate-400">
-            Search any address or landmark — latitude & longitude coordinates are automatically resolved
+          <p className="text-xs text-slate-500">
+            Search campus landmarks or street addresses — coordinates auto-fetch and measure PostGIS route line overlaps
           </p>
         </div>
 
-        {/* Search Parameters Form with Address Autocomplete */}
-        <form onSubmit={handleSearch} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        {/* Search Autocomplete Form */}
+        <form onSubmit={handleSearch} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <LocationPicker
               label="1. Pickup Address / Landmark"
@@ -100,15 +116,14 @@ export default function FindRidePage() {
             />
           </div>
 
-          <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-            <div className="flex items-center space-x-2 text-xs text-slate-400">
-              <span>Proximity Threshold:</span>
-              <span className="font-bold text-cyan-400">500 meters (PostGIS LineString Overlap)</span>
+          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+            <div className="text-xs text-slate-500">
+              Proximity Threshold: <strong className="text-[#1e3a8a]">500 meters (PostGIS LineString Overlap)</strong>
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 font-semibold rounded-xl text-sm shadow-lg transition"
+              className="px-6 py-2.5 bg-[#1e3a8a] hover:bg-[#1d3271] text-white font-bold rounded-xl text-xs shadow-md transition flex items-center gap-1.5"
             >
               {loading ? 'Executing PostGIS Query...' : '🔍 Search Matching Rides'}
             </button>
@@ -116,56 +131,66 @@ export default function FindRidePage() {
         </form>
 
         {requestStatus && (
-          <div className="p-4 bg-cyan-950/80 border border-cyan-800 rounded-xl text-cyan-300 text-xs font-bold">
-            {requestStatus}
+          <div className="p-4 bg-teal-50 border border-teal-200 rounded-2xl text-teal-800 text-xs font-bold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-teal-600" /> {requestStatus}
           </div>
         )}
 
         {/* Results List */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-slate-200">
+          <h2 className="text-lg font-bold text-[#1e3a8a]">
             PostGIS Matching Results ({matches.length})
           </h2>
 
           {matches.length === 0 ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-400 space-y-3">
-              <p className="text-base font-semibold">No driver route overlap found within 500m threshold.</p>
-              <p className="text-xs text-slate-500">Select your pickup & dropoff addresses above to query active driver routes.</p>
+            <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-500 space-y-3 shadow-sm">
+              <p className="text-sm font-semibold">No driver route overlap found within 500m threshold.</p>
+              <p className="text-xs text-slate-400">Select your pickup & dropoff addresses above to query available driver routes.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {matches.map((m) => (
                 <div
                   key={m.ride.id}
-                  className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl hover:border-cyan-800 transition flex flex-col justify-between"
+                  className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm hover:shadow-md transition flex flex-col justify-between"
                 >
                   <div className="space-y-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="text-xs text-cyan-400 font-bold uppercase tracking-wider">
-                          DRIVER: {m.driver_name}
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
+                            {m.driver_name.substring(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-slate-900 flex items-center gap-1">
+                              {m.driver_name}
+                              <span className="text-[10px] bg-teal-50 text-teal-700 border border-teal-200 px-1.5 py-0.2 rounded-full">
+                                Verified
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-slate-400">Vehicle: Campus Driver</div>
+                          </div>
                         </div>
-                        <div className="text-lg font-extrabold text-white mt-1">
+
+                        <div className="text-sm font-bold text-[#1e3a8a] mt-2">
                           {m.ride.origin_name} ➔ {m.ride.destination_name}
                         </div>
                       </div>
 
-                      <div className="text-right">
-                        <div className="inline-block px-3 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-extrabold text-sm rounded-full shadow">
-                          {m.matchScore}% Match
-                        </div>
+                      <div className="text-right w-28">
+                        <MatchBar percent={m.matchScore} />
                       </div>
                     </div>
 
-                    {/* PostGIS Distance Breakdown */}
-                    <div className="grid grid-cols-2 gap-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 text-xs">
+                    {/* PostGIS Distance Callouts */}
+                    <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
                       <div>
-                        <span className="text-slate-400">Pickup Route Proximity:</span>
-                        <div className="font-bold text-emerald-400">{m.pickupDistanceMeters} meters</div>
+                        <span className="text-slate-400">Pickup Proximity:</span>
+                        <div className="font-bold text-teal-600">{m.pickupDistanceMeters}m (Threshold &le; 500m)</div>
                       </div>
                       <div>
-                        <span className="text-slate-400">Dropoff Route Proximity:</span>
-                        <div className="font-bold text-emerald-400">{m.dropoffDistanceMeters} meters</div>
+                        <span className="text-slate-400">Dropoff Proximity:</span>
+                        <div className="font-bold text-teal-600">{m.dropoffDistanceMeters}m (Threshold &le; 500m)</div>
                       </div>
                     </div>
 
@@ -173,17 +198,17 @@ export default function FindRidePage() {
                       origin={m.ride.origin}
                       destination={m.ride.destination}
                       routeGeometryGeoJson={m.ride.route_geometry}
-                      height="200px"
+                      height="180px"
                     />
                   </div>
 
-                  <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
-                    <div className="text-xs text-slate-400">
-                      Seats Available: <strong className="text-cyan-300">{m.ride.available_seats}</strong>
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <div className="text-xs text-slate-500">
+                      Seats Available: <strong className="text-[#1e3a8a]">{m.ride.available_seats}</strong>
                     </div>
                     <button
                       onClick={() => handleBookRide(m.ride.id)}
-                      className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 font-bold text-white rounded-lg text-xs transition shadow"
+                      className="px-4 py-2 bg-[#1e3a8a] hover:bg-[#1d3271] font-bold text-white rounded-xl text-xs transition shadow-sm"
                     >
                       Request Seat
                     </button>
@@ -194,6 +219,8 @@ export default function FindRidePage() {
           )}
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }
