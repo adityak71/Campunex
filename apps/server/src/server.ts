@@ -11,6 +11,8 @@ import { runMigrations } from './db/migrate.js';
 import { runSeeds } from './db/seed.js';
 import authRoutes from './routes/auth.routes.js';
 import ridesRoutes from './routes/rides.routes.js';
+import tripsRoutes from './routes/trips.routes.js';
+import { initializeWebSocketHandlers } from './modules/websocket/socket.handler.js';
 import { HealthCheckResponse } from '@campunex/shared';
 
 const app = express();
@@ -23,6 +25,9 @@ export const io = new SocketIOServer(server, {
     credentials: true,
   },
 });
+
+// Initialize WebSocket Event Handlers
+initializeWebSocketHandlers(io);
 
 // Middleware
 app.use(helmet());
@@ -38,6 +43,7 @@ app.use(cookieParser());
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/rides', ridesRoutes);
+app.use('/api/v1/trips', tripsRoutes);
 
 // Health Check Endpoint
 app.get('/health', async (_req, res) => {
