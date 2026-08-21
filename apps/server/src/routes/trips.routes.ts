@@ -5,12 +5,14 @@ import {
   handleVerifyStartOtp,
   handleGenerateCompletionOtp,
   handleVerifyCompletionOtp,
+  handleGetTripHistory,
 } from '../modules/trips/trips.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireRole } from '../middleware/rbac.js';
 
 const router = Router();
 
+router.get('/history/my-history', authenticate, handleGetTripHistory);
 router.get('/:id', authenticate, handleGetTrip);
 
 // Driver Dual OTP Endpoints

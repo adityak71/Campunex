@@ -200,3 +200,27 @@ export async function processCompletionOtpVerification(
 
   return { status: updatedStatus };
 }
+
+export async function getUserTripHistory(userId: string): Promise<any[]> {
+  const query = `
+    SELECT 
+      t.id,
+      t.status,
+      t.started_at,
+      t.completed_at,
+      t.created_at,
+      r.origin_name,
+      r.destination_name,
+      r.departure_time,
+      u_driver.name AS driver_name,
+      u_rider.name AS rider_name
+    FROM trips t
+    JOIN rides r ON t.ride_id = r.id
+    JOIN users u_driver ON t.driver_id = u_driver.id
+    JOIN users u_rider ON t.rider_id = u_rider.id
+    WHERE t.driver_id = $1 OR t.rider_id = $1
+    ORDER BY t.created_at DESC;
+  `;
+  const res = await pool.query(query, [userId]);
+  return res.rows;
+}

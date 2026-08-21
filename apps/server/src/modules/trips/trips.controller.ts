@@ -76,3 +76,14 @@ export async function handleVerifyCompletionOtp(req: Request, res: Response): Pr
     res.status(400).json({ error: err.message || 'Completion OTP verification failed' });
   }
 }
+
+export async function handleGetTripHistory(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user!.userId;
+    const { getUserTripHistory } = await import('./trips.service.js');
+    const history = await getUserTripHistory(userId);
+    res.status(200).json({ history });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to fetch trip history' });
+  }
+}
