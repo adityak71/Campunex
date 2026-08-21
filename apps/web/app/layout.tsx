@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { ThemeProvider } from '../components/ThemeProvider';
+import { ToastProvider } from '../components/ui/Toast';
 
 export const metadata: Metadata = {
   title: 'Campunex — Campus Ride-Matching Platform',
@@ -23,7 +24,9 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased font-sans bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 transition-colors duration-200">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
