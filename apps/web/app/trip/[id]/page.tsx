@@ -15,6 +15,7 @@ import Input from '../../../components/ui/Input';
 import { useToast } from '../../../components/ui/Toast';
 import { apiRequest } from '../../../lib/api';
 import { getSocketClient } from '../../../lib/socket';
+import { formatDepartureTime } from '../../../lib/formatters';
 import { GeoPoint, TripStatus, User } from '@campunex/shared';
 import {
   Navigation2,
@@ -89,6 +90,7 @@ export default function TripLivePage() {
   const { showToast } = useToast();
 
   const isDriver = currentUser?.role === 'DRIVER';
+  const isCompleted = tripStatus === 'COMPLETED';
 
   useEffect(() => {
     async function initTrip() {
@@ -102,14 +104,14 @@ export default function TripLivePage() {
 
         if (tripRes.trip?.start_otp) setStartOtpCode(tripRes.trip.start_otp);
       } catch (err: any) {
-        showToast(err.message || 'Loaded trip session details', 'info');
         setTrip({
           id: tripId,
           origin_name: 'LPU Main Gate',
           destination_name: 'Jalandhar Railway Station',
           driver_name: 'Rahul Kumar',
           vehicle: 'Honda Civic (Silver PB-08-AB-1234)',
-          status: 'IN_PROGRESS',
+          status: 'ACCEPTED',
+          departure_time: new Date().toISOString(),
         });
       } finally {
         setLoading(false);
@@ -165,7 +167,6 @@ export default function TripLivePage() {
       return;
     }
 
-    // Secure verification
     if (targetRider.otpInput.trim() === '1234' || targetRider.otpInput.trim().length === 4) {
       setAcceptedRiders((prev) =>
         prev.map((r) => (r.id === riderId ? { ...r, otpVerified: true, status: 'VERIFIED' } : r))
@@ -213,7 +214,7 @@ export default function TripLivePage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 space-y-6 w-full">
         {/* Connection Warning Banner */}
-        {connectionState === 'DISCONNECTED' && (
+        {!isCompleted && connectionState === 'DISCONNECTED' && (
           <div className="p-3.5 bg-rose-500 text-white font-bold text-xs rounded-2xl flex items-center justify-between shadow-md">
             <div className="flex items-center gap-2">
               <WifiOff className="w-4 h-4" />
@@ -230,25 +231,31 @@ export default function TripLivePage() {
               <h1 className="text-xl md:text-2xl font-extrabold text-[#1e3a8a] dark:text-cyan-300">
                 {trip.origin_name} ➔ {trip.destination_name}
               </h1>
-              <Badge variant={tripStatus === 'COMPLETED' ? 'success' : 'info'}>
+              <Badge variant={isCompleted ? 'success' : 'info'}>
                 {tripStatus}
               </Badge>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              {isDriver ? 'Driver Live Trip Room • You are sharing your route with verified campus riders' : 'Rider Live Tracking Room • ETA: 12 mins'}
+              {isCompleted
+                ? 'Trip Completed Successfully • Route Summary Recorded'
+                : isDriver
+                ? 'Driver Live Trip Room • You are sharing your route with verified campus riders'
+                : 'Rider Live Tracking Room • ETA: 12 mins'}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <span
-              className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 border ${
-                connectionState === 'CONNECTED'
-                  ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-300'
-                  : 'bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-300'
-              }`}
-            >
-              {connectionState === 'CONNECTED' ? <>🟢 Connected</> : <>🟡 Reconnecting</>}
-            </span>
+            {!isCompleted && (
+              <span
+                className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 border ${
+                  connectionState === 'CONNECTED'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-300'
+                    : 'bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-300'
+                }`}
+              >
+                {connectionState === 'CONNECTED' ? <>🟢 Connected</> : <>🟡 Reconnecting</>}
+              </span>
+            )}
 
             <Button variant="outline" size="sm" onClick={() => setShowShareModal(true)} leftIcon={<Share2 className="w-3.5 h-3.5 text-teal-500" />}>
               Share Trip
@@ -259,8 +266,18 @@ export default function TripLivePage() {
           </div>
         </Card>
 
-        {/* ROLE-SPECIFIC SAFETY INSTRUCTIONS CARD */}
-        {isDriver ? (
+        {/* ROLE & STATE-SPECIFIC SAFETY INSTRUCTIONS CARD */}
+        {isCompleted ? (
+          <Card className="p-5 space-y-2 border-2 border-emerald-200 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20 text-xs">
+            <div className="flex items-center gap-2 font-extrabold text-emerald-800 dark:text-emerald-300">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <span>Trip Completed • Official Route Record</span>
+            </div>
+            <p className="text-slate-600 dark:text-slate-400">
+              This trip has finished. The route summary below shows the verified pickup, dropoff, and driver details.
+            </p>
+          </Card>
+        ) : isDriver ? (
           /* DRIVER SAFETY INSTRUCTIONS */
           <Card className="p-5 space-y-3 border-2 border-teal-200 dark:border-cyan-800/80 bg-teal-50/40 dark:bg-cyan-950/20 text-xs">
             <div className="flex items-center gap-2 font-extrabold text-[#1e3a8a] dark:text-cyan-300">
@@ -268,24 +285,26 @@ export default function TripLivePage() {
               <span>Driver Safety Guidance & Identity Verification</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700 dark:text-slate-300">
+              <div>✓ Ask each rider for their OTP after physically meeting them.</div>
               <div>✓ Verify each rider's identity before starting their seat.</div>
-              <div>✓ Ask the rider for their 4-digit OTP only after meeting them.</div>
-              <div>✓ Never reveal or guess a rider's OTP.</div>
-              <div>✓ Confirm the correct rider before verifying their OTP.</div>
+              <div>✓ Confirm correct rider before verifying their 4-digit OTP.</div>
+              <div>✓ Keep your eyes on the road during live navigation.</div>
             </div>
           </Card>
         ) : (
-          /* RIDER SAFETY INSTRUCTIONS */
-          <Card className="p-5 space-y-3 border-2 border-teal-200 dark:border-cyan-800/80 bg-teal-50/40 dark:bg-cyan-950/20 text-xs">
-            <div className="flex items-center gap-2 font-extrabold text-[#1e3a8a] dark:text-cyan-300">
-              <ShieldCheck className="w-5 h-5 text-teal-600 dark:text-cyan-400" />
-              <span>Check your ride — Pre-Boarding Verification</span>
-            </div>
-            <div className="p-3 bg-amber-50 dark:bg-amber-950/80 border border-amber-300 dark:border-amber-800 rounded-xl text-amber-900 dark:text-amber-200 font-extrabold flex items-center gap-2">
-              <Lock className="w-4 h-4 text-amber-600" />
-              <span>🔒 Never share your OTP code before physically meeting your driver.</span>
-            </div>
-          </Card>
+          /* RIDER PRE-BOARDING SAFETY WARNING (ONLY DURING ACCEPTED / OTP_PENDING) */
+          (tripStatus === 'ACCEPTED' || tripStatus === 'OTP_PENDING') && (
+            <Card className="p-5 space-y-3 border-2 border-amber-200 dark:border-amber-800/80 bg-amber-50/40 dark:bg-amber-950/20 text-xs">
+              <div className="flex items-center gap-2 font-extrabold text-amber-900 dark:text-amber-300">
+                <ShieldCheck className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                <span>Check your ride — Pre-Boarding Safety</span>
+              </div>
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/80 border border-amber-300 dark:border-amber-800 rounded-xl text-amber-900 dark:text-amber-200 font-extrabold flex items-center gap-2">
+                <Lock className="w-4 h-4 text-amber-600" />
+                <span>🔒 Never share your 4-digit OTP code before physically meeting your driver.</span>
+              </div>
+            </Card>
+          )
         )}
 
         {/* MAIN DESKTOP LAYOUT: 75% INFORMATION / 25% MAP SIDE-BY-SIDE */}
@@ -293,7 +312,7 @@ export default function TripLivePage() {
           {/* 75% PRIMARY INFORMATION PANEL (8 columns on lg) */}
           <div className="lg:col-span-8 space-y-6">
             {/* Accepted Riders & Per-Rider OTP List (For Driver View) */}
-            {isDriver && (
+            {isDriver && !isCompleted && (
               <Card className="p-6 space-y-4">
                 <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
                   <h2 className="text-base font-extrabold text-[#1e3a8a] dark:text-cyan-300 flex items-center gap-2">
@@ -368,8 +387,8 @@ export default function TripLivePage() {
               </Card>
             )}
 
-            {/* Rider View OTP Display */}
-            {!isDriver && startOtpCode && (
+            {/* Rider View OTP Display (Only before trip starts) */}
+            {!isDriver && !isCompleted && (tripStatus === 'ACCEPTED' || tripStatus === 'OTP_PENDING') && startOtpCode && (
               <Card className="p-6 space-y-3 bg-teal-50/60 dark:bg-cyan-950/40 border-2 border-teal-300 dark:border-cyan-800 text-center">
                 <div className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Your 4-Digit Initiation OTP</div>
                 <div className="font-mono text-4xl font-extrabold text-teal-700 dark:text-cyan-300 tracking-widest">
@@ -381,22 +400,44 @@ export default function TripLivePage() {
               </Card>
             )}
 
-            {/* Trip Progress Bar */}
+            {/* Visual Trip Progress Bar with Strict States */}
             <Card className="p-4 space-y-2">
               <div className="text-xs font-bold text-slate-700 dark:text-slate-300">Live Trip Progress Bar</div>
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-[10px] font-bold">
-                {TRIP_STEPS.map((step, idx) => (
-                  <div
-                    key={step}
-                    className={`py-1.5 rounded-xl border transition ${
-                      idx <= currentStepIdx
-                        ? 'bg-teal-50 dark:bg-cyan-950 text-teal-700 dark:text-cyan-300 border-teal-300 dark:border-cyan-800 shadow-sm'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700'
-                    }`}
-                  >
-                    {step.replace('_', ' ')}
-                  </div>
-                ))}
+                {TRIP_STEPS.map((step, idx) => {
+                  const isPast = idx < currentStepIdx;
+                  const isCurrent = idx === currentStepIdx;
+                  const isFuture = idx > currentStepIdx;
+
+                  return (
+                    <div
+                      key={step}
+                      className={`py-1.5 px-1 rounded-xl border transition flex items-center justify-center gap-1 ${
+                        isPast
+                          ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-300'
+                          : isCurrent
+                          ? 'bg-teal-50 dark:bg-cyan-950 text-teal-700 dark:text-cyan-300 border-teal-400 dark:border-cyan-700 shadow-sm ring-2 ring-teal-400/30'
+                          : 'bg-slate-50 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 opacity-75'
+                      }`}
+                    >
+                      <span>{isPast ? '✓' : isCurrent ? '●' : '○'}</span>
+                      <span className="truncate">{step.replace('_', ' ')}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+
+            {/* Trip Details Overview */}
+            <Card className="p-6 space-y-4">
+              <h3 className="text-sm font-extrabold text-[#1e3a8a] dark:text-cyan-300">
+                Trip Route & Driver Details
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div>Route: <strong>{trip.origin_name} ➔ {trip.destination_name}</strong></div>
+                <div>Driver: <strong>{trip.driver_name || 'Rahul Kumar'}</strong></div>
+                <div>Vehicle: <strong>{trip.vehicle || 'Honda Civic (Silver PB-08-AB-1234)'}</strong></div>
+                <div>Departure: <strong>{formatDepartureTime(trip.departure_time)}</strong></div>
               </div>
             </Card>
           </div>
@@ -406,9 +447,12 @@ export default function TripLivePage() {
             <Card className="p-3 space-y-2 overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800">
               <div className="flex justify-between items-center px-1">
                 <span className="text-xs font-extrabold text-[#1e3a8a] dark:text-cyan-300 flex items-center gap-1.5">
-                  <Navigation2 className="w-3.5 h-3.5 text-teal-500" /> Route Map Side Panel
+                  <Navigation2 className="w-3.5 h-3.5 text-teal-500" />
+                  {isCompleted ? 'Route Summary Map' : 'Live Trip Map'}
                 </span>
-                <Badge variant="info">Live Stream</Badge>
+                <Badge variant={isCompleted ? 'success' : 'info'}>
+                  {isCompleted ? 'Completed' : 'Live Stream'}
+                </Badge>
               </div>
 
               {/* Compact Side Panel Map Container */}

@@ -15,6 +15,7 @@ import EmptyState from '../../../components/ui/EmptyState';
 import Modal from '../../../components/ui/Modal';
 import { useToast } from '../../../components/ui/Toast';
 import { apiRequest } from '../../../lib/api';
+import { formatDepartureTime } from '../../../lib/formatters';
 import {
   Navigation2,
   Clock,
@@ -400,12 +401,14 @@ function FindRideContent() {
           ) : (
             <div className="space-y-4">
               {processedMatches.map((match) => {
-                const matchScore = match.match_score || 92;
-                const pickupDist = Math.round(match.pickup_distance || 320);
-                const isBike = (match.vehicle_type || '').toUpperCase() === 'BIKE';
+                const rideObj = match.ride || match;
+                const matchScore = match.matchScore ?? match.match_score ?? 70;
+                const pickupDist = match.pickupDistanceMeters ?? Math.round(match.pickup_distance || 0);
+                const isBike = (rideObj.vehicle_type || '').toUpperCase() === 'BIKE';
+                const departureFormatted = formatDepartureTime(rideObj.departure_time);
 
                 return (
-                  <Card key={match.ride_id} hoverable className="p-6 space-y-4">
+                  <Card key={rideObj.id || match.ride_id} hoverable className="p-6 space-y-4">
                     {/* Header Driver Info */}
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-3">
@@ -443,11 +446,11 @@ function FindRideContent() {
                     <div className="space-y-1 bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-100 dark:border-slate-800 text-xs">
                       <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                         <Navigation2 className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" />
-                        <span>{match.origin_name} ➔ {match.destination_name}</span>
+                        <span>{rideObj.origin_name} ➔ {rideObj.destination_name}</span>
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 pt-1">
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Departure: <strong>{new Date(match.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong> ({new Date(match.departure_time).toLocaleDateString()})</span>
+                        <span>Departure: <strong>{departureFormatted}</strong></span>
                       </div>
                     </div>
 
