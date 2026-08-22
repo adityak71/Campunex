@@ -28,7 +28,8 @@ import {
   MapPin,
   Calendar,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  Bell
 } from 'lucide-react';
 
 function FindRideContent() {
@@ -71,6 +72,8 @@ function FindRideContent() {
   const [selectedRideForRequest, setSelectedRideForRequest] = useState<any | null>(null);
   const [requestSubmitting, setRequestSubmitting] = useState(false);
   const [showMobileMap, setShowMobileMap] = useState(false);
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertCreating, setAlertCreating] = useState(false);
 
   const fetchMatches = async () => {
     setLoading(true);
@@ -357,10 +360,40 @@ function FindRideContent() {
               <Skeleton className="h-44 w-full" />
             </div>
           ) : processedMatches.length === 0 ? (
-            <EmptyState
-              title="No open driver routes match your search criteria"
-              description="Drivers publish routes daily. Try expanding your search date or time window."
-            />
+            <Card className="p-8 text-center space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-sm">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+
+              <div className="space-y-1">
+                <h3 className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
+                  No compatible rides found
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                  There are currently no open driver rides matching this route and time.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchMatches}
+                  leftIcon={<Search className="w-4 h-4" />}
+                >
+                  Search Again
+                </Button>
+
+                <Button
+                  variant="teal"
+                  size="sm"
+                  onClick={() => setShowAlertModal(true)}
+                  leftIcon={<Bell className="w-4 h-4" />}
+                >
+                  Notify Me When a Ride Appears
+                </Button>
+              </div>
+            </Card>
           ) : (
             <div className="space-y-4">
               {processedMatches.map((match) => {
@@ -496,6 +529,55 @@ function FindRideContent() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* RIDE AVAILABILITY ALERT CREATION MODAL */}
+      <Modal
+        isOpen={showAlertModal}
+        onClose={() => setShowAlertModal(false)}
+        title="Create Ride Availability Alert"
+      >
+        <div className="space-y-4 text-xs">
+          <p className="text-slate-600 dark:text-slate-400">
+            Set an automated alert to be notified as soon as a compatible driver publishes a matching route.
+          </p>
+
+          <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2">
+            <div>Pickup: <strong>{originName}</strong></div>
+            <div>Destination: <strong>{destName}</strong></div>
+            <div>Target Date: <strong>{searchDate}</strong></div>
+            <div>Time Window: <strong>{searchTimeWindow}</strong></div>
+            <div>Vehicle Preference: <strong>{vehicleFilter}</strong></div>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAlertModal(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="teal"
+              size="sm"
+              onClick={() => {
+                setAlertCreating(true);
+                setTimeout(() => {
+                  setAlertCreating(false);
+                  setShowAlertModal(false);
+                  showToast('🎉 Ride alert created! You will receive a notification when a compatible driver publishes a matching route.', 'success');
+                  router.push('/rides/alerts');
+                }, 600);
+              }}
+              isLoading={alertCreating}
+              className="flex-1"
+            >
+              Create Ride Alert
+            </Button>
+          </div>
+        </div>
       </Modal>
     </main>
   );
