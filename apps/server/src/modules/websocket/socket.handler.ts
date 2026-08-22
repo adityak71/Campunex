@@ -50,7 +50,8 @@ export function initializeWebSocketHandlers(io: Server): void {
         }
 
         const trip = tripRes.rows[0];
-        if (trip.driver_id !== user.userId && trip.rider_id !== user.userId) {
+        const currentUserId = user.userId || (user as any).id;
+        if (trip.driver_id !== currentUserId && trip.rider_id !== currentUserId) {
           socket.emit('trip:error', { message: 'Unauthorized to join this trip room' });
           return;
         }
