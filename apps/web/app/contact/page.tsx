@@ -27,7 +27,7 @@ export default function ContactPage() {
       });
 
       setSubmitted(true);
-      showToast('Support message submitted successfully!', 'success');
+      showToast(response?.message || 'Support message submitted successfully!', 'success');
     } catch (error) {
       showToast('Error submitting support request', 'error');
     }

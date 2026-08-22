@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { registerUser, loginUser, verifyInstitutionOtp, getUserById } from './auth.service.js';
+import { registerUser, loginUser, verifyInstitutionOtp, resendInstitutionOtp, getUserById } from './auth.service.js';
 import { setTokenCookie, clearTokenCookie } from '../../utils/jwt.js';
 import { registerSchema, loginSchema } from '@campunex/shared';
 
@@ -11,7 +11,7 @@ export async function handleRegister(req: Request, res: Response): Promise<void>
       return;
     }
 
-    const { user, token, verificationOtp } = await registerUser(parseResult.data);
+    const { user, token } = await registerUser(parseResult.data);
     setTokenCookie(res, token);
 
     res.status(201).json({
@@ -71,23 +71,30 @@ export async function handleGetMe(req: Request, res: Response): Promise<void> {
 
 export async function handleVerifyInstitution(req: Request, res: Response): Promise<void> {
   try {
-    const userId = req.user?.userId;
     const { otp } = req.body;
-
-    if (!userId || !otp) {
-      res.status(400).json({ error: 'User ID and 6-digit verification OTP are required' });
+    if (!otp) {
+      res.status(400).json({ error: 'OTP is required' });
       return;
     }
 
-    const { user, token } = await verifyInstitutionOtp(userId, otp);
+    const { user, token } = await verifyInstitutionOtp(req.user!.userId, otp);
     setTokenCookie(res, token);
 
     res.status(200).json({
-      message: 'Institutional identity successfully verified',
+      message: 'Institution verified successfully',
       user,
       token,
     });
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Verification failed' });
+  }
+}
+
+export async function handleResendOtp(req: Request, res: Response): Promise<void> {
+  try {
+    await resendInstitutionOtp(req.user!.userId);
+    res.status(200).json({ message: 'A new OTP has been sent to your email.' });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Failed to resend OTP' });
   }
 }

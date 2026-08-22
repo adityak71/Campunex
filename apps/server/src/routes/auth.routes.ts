@@ -6,6 +6,7 @@ import {
   handleLogout,
   handleGetMe,
   handleVerifyInstitution,
+  handleResendOtp,
 } from '../modules/auth/auth.controller.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -22,5 +23,6 @@ router.post('/login', authLimiter, handleLogin);
 router.post('/logout', handleLogout);
 router.get('/me', authenticate, handleGetMe);
 router.post('/verify-institution', authenticate, handleVerifyInstitution);
+router.post('/resend-otp', authenticate, authLimiter, handleResendOtp);
 
 export default router;

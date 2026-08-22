@@ -14,7 +14,15 @@ const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
  */
 export async function sendVerificationEmail(toEmail: string, otp: string): Promise<void> {
   if (!apiKey.apiKey || apiKey.apiKey === 'MISSING_API_KEY') {
-    console.warn(`[MAILER] No Brevo API Key found. Skipping email to ${toEmail}. OTP: ${otp}`);
+    console.warn(`[MAILER] No Brevo API Key found. Skipping email to ${toEmail}.`);
+    return;
+  }
+
+  const senderEmail = process.env.BREVO_SENDER_EMAIL;
+  const senderName = process.env.BREVO_SENDER_NAME || 'Campunex - Campus Ridesharing';
+
+  if (!senderEmail) {
+    console.warn(`[MAILER] BREVO_SENDER_EMAIL not configured. Cannot send email to ${toEmail}.`);
     return;
   }
 
@@ -30,14 +38,15 @@ export async function sendVerificationEmail(toEmail: string, otp: string): Promi
       <p style="color: #64748b; font-size: 12px;">This OTP will expire in 10 minutes. If you did not request this, please ignore this email.</p>
     </div>
   `;
-  sendSmtpEmail.sender = { name: 'Campunex', email: 'noreply@campunex.com' };
+  sendSmtpEmail.sender = { name: senderName, email: senderEmail };
   sendSmtpEmail.to = [{ email: toEmail }];
 
   try {
     const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
     console.log(`[MAILER] OTP email sent successfully to ${toEmail}. MessageId:`, data.messageId);
-  } catch (error) {
-    console.error(`[MAILER] Failed to send OTP email to ${toEmail}:`, error);
+  } catch (error: any) {
+    const errorMsg = error.response?.body?.message || error.message || 'Unknown Brevo Error';
+    console.error(`[MAILER] Brevo email failed. purpose=verification recipient=${toEmail} error=${errorMsg}`);
     throw new Error('Failed to send verification email');
   }
 }
@@ -51,6 +60,15 @@ export async function sendContactEmail(name: string, replyToEmail: string, issue
     return;
   }
 
+  const senderEmail = process.env.BREVO_SENDER_EMAIL;
+  const senderName = process.env.BREVO_SENDER_NAME || 'Campunex - Campus Ridesharing';
+  const supportEmail = process.env.BREVO_SUPPORT_EMAIL;
+
+  if (!senderEmail || !supportEmail) {
+    console.warn(`[MAILER] BREVO_SENDER_EMAIL or BREVO_SUPPORT_EMAIL not configured. Cannot send support email.`);
+    return;
+  }
+
   const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
   sendSmtpEmail.subject = `[Campunex Support] ${issueType} - ${name}`;
   sendSmtpEmail.htmlContent = `
@@ -59,19 +77,19 @@ export async function sendContactEmail(name: string, replyToEmail: string, issue
       <p><strong>From:</strong> ${name} &lt;${replyToEmail}&gt;</p>
       <p><strong>Issue Category:</strong> ${issueType}</p>
       <hr />
-      <p><strong>Message:</strong></p>
       <p style="white-space: pre-wrap;">${message}</p>
     </div>
   `;
-  sendSmtpEmail.sender = { name: 'Campunex Support System', email: 'noreply@campunex.com' };
-  sendSmtpEmail.to = [{ email: 'support@campunex.com' }]; // Replace with actual admin email
-  sendSmtpEmail.replyTo = { email: replyToEmail, name: name };
+  sendSmtpEmail.sender = { name: senderName, email: senderEmail };
+  sendSmtpEmail.to = [{ email: supportEmail }];
+  sendSmtpEmail.replyTo = { email: replyToEmail, name };
 
   try {
     const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
-    console.log(`[MAILER] Contact email sent successfully. MessageId:`, data.messageId);
-  } catch (error) {
-    console.error(`[MAILER] Failed to send contact email:`, error);
+    console.log(`[MAILER] Support email sent successfully. MessageId:`, data.messageId);
+  } catch (error: any) {
+    const errorMsg = error.response?.body?.message || error.message || 'Unknown Brevo Error';
+    console.error(`[MAILER] Brevo email failed. purpose=contact recipient=${supportEmail} error=${errorMsg}`);
     throw new Error('Failed to send contact email');
   }
 }

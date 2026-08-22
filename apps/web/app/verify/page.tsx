@@ -56,9 +56,17 @@ export default function VerifyPage() {
     }
   };
 
-  const handleResendOtp = () => {
-    setResendTimer(30);
-    showToast('A new 6-digit verification OTP has been sent to your email', 'info');
+  const handleResendOtp = async () => {
+    try {
+      setResendTimer(30); // Optimistically start timer
+      await apiRequest('/auth/resend-otp', {
+        method: 'POST',
+      });
+      showToast('A new 6-digit verification OTP has been sent to your email', 'info');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to resend OTP', 'error');
+      setResendTimer(0); // Reset timer on failure
+    }
   };
 
   return (

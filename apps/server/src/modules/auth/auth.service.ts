@@ -10,7 +10,7 @@ export async function registerUser(data: {
   email: string;
   password: string;
   role: UserRole;
-}): Promise<{ user: User; token: string; verificationOtp?: string }> {
+}): Promise<{ user: User; token: string }> {
   const { name, email, password, role } = data;
 
   // 1. Check existing email
@@ -63,7 +63,7 @@ export async function registerUser(data: {
   };
   const token = signToken(jwtPayload);
 
-  return { user: newUser, token, verificationOtp: otp };
+  return { user: newUser, token };
 }
 
 export async function loginUser(data: {
@@ -144,4 +144,33 @@ export async function getUserById(userId: string): Promise<User | null> {
     [userId]
   );
   return res.rows[0] || null;
+}
+
+export async function resendInstitutionOtp(userId: string): Promise<void> {
+  const userRes = await pool.query<User>(
+    'SELECT id, email, verification_status FROM users WHERE id = $1;',
+    [userId]
+  );
+
+  if (userRes.rows.length === 0) {
+    throw new Error('User not found');
+  }
+
+  const user = userRes.rows[0];
+
+  if (user.verification_status === 'VERIFIED') {
+    throw new Error('User is already verified');
+  }
+
+  // Check rate limit (only resend once per minute)
+  const ttl = await redis.ttl(`inst_otp:${userId}`);
+  if (ttl > 540) { // If TTL is > 9 minutes, they just requested it.
+    throw new Error('Please wait before requesting a new OTP');
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  await redis.setex(`inst_otp:${userId}`, 600, otp);
+
+  // Send OTP
+  sendVerificationEmail(user.email, otp).catch(console.error);
 }
