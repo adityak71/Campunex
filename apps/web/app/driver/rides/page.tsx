@@ -21,8 +21,31 @@ import {
   ChevronRight,
   Calendar,
   AlertCircle,
-  Activity
+  Activity,
+  History
 } from 'lucide-react';
+
+const GRACE_PERIOD_MS = 30 * 60 * 1000; // 30 minutes grace period for departure window
+
+function getEffectiveRideStatus(ride: any): 'UPCOMING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED' {
+  const status = (ride.status || '').toUpperCase();
+
+  // Terminal & Active States (Never Overwrite!)
+  if (status === 'COMPLETED') return 'COMPLETED';
+  if (status === 'CANCELLED') return 'CANCELLED';
+  if (status === 'ACTIVE' || status === 'IN_PROGRESS' || status === 'STARTED') return 'ACTIVE';
+  if (status === 'EXPIRED') return 'EXPIRED';
+
+  // For Unstarted Rides (SCHEDULED / OPEN):
+  const depTime = new Date(ride.departure_time).getTime();
+  const now = Date.now();
+
+  if (depTime + GRACE_PERIOD_MS < now) {
+    return 'EXPIRED';
+  }
+
+  return 'UPCOMING';
+}
 
 export default function DriverRidesPage() {
   const [rides, setRides] = useState<any[]>([]);
@@ -30,8 +53,8 @@ export default function DriverRidesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Tab filter: UPCOMING | ACTIVE | COMPLETED | CANCELLED
-  const [activeTab, setActiveTab] = useState<'UPCOMING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('UPCOMING');
+  // Tab filter: UPCOMING | ACTIVE | COMPLETED | CANCELLED | EXPIRED
+  const [activeTab, setActiveTab] = useState<'UPCOMING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED'>('UPCOMING');
 
   const { showToast } = useToast();
 
@@ -69,12 +92,8 @@ export default function DriverRidesPage() {
   }, []);
 
   const filteredRides = rides.filter((ride) => {
-    const status = (ride.status || '').toUpperCase();
-    if (activeTab === 'UPCOMING') return status === 'OPEN' || status === 'SCHEDULED';
-    if (activeTab === 'ACTIVE') return status === 'IN_PROGRESS' || status === 'STARTED';
-    if (activeTab === 'COMPLETED') return status === 'COMPLETED';
-    if (activeTab === 'CANCELLED') return status === 'CANCELLED';
-    return true;
+    const effectiveStatus = getEffectiveRideStatus(ride);
+    return effectiveStatus === activeTab;
   });
 
   return (
@@ -101,10 +120,10 @@ export default function DriverRidesPage() {
           </Link>
         </div>
 
-        {/* Filter Tabs (Upcoming, Active, Completed, Cancelled) */}
+        {/* Filter Tabs (Upcoming, Active, Completed, Cancelled, Expired) */}
         <Card className="p-4">
           <div className="flex flex-wrap gap-2">
-            {(['UPCOMING', 'ACTIVE', 'COMPLETED', 'CANCELLED'] as const).map((tab) => (
+            {(['UPCOMING', 'ACTIVE', 'COMPLETED', 'CANCELLED', 'EXPIRED'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -114,7 +133,7 @@ export default function DriverRidesPage() {
                     : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                 }`}
               >
-                {tab}
+                {tab === 'EXPIRED' ? 'EXPIRED (HISTORY)' : tab}
               </button>
             ))}
           </div>
@@ -148,54 +167,57 @@ export default function DriverRidesPage() {
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredRides.map((ride) => (
-              <Card key={ride.id} hoverable className="p-6 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <div className="text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                      <Navigation2 className="w-4 h-4 text-teal-500 flex-shrink-0" />
-                      <span>{ride.origin_name} ➔ {ride.destination_name}</span>
+            {filteredRides.map((ride) => {
+              const effectiveStatus = getEffectiveRideStatus(ride);
+              return (
+                <Card key={ride.id} hoverable className="p-6 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <div className="text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <Navigation2 className="w-4 h-4 text-teal-500 flex-shrink-0" />
+                        <span>{ride.origin_name} ➔ {ride.destination_name}</span>
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Departure: {new Date(ride.departure_time).toLocaleString()}</span>
+                      </div>
                     </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>Departure: {new Date(ride.departure_time).toLocaleString()}</span>
-                    </div>
+
+                    <Badge
+                      variant={
+                        effectiveStatus === 'COMPLETED'
+                          ? 'success'
+                          : effectiveStatus === 'ACTIVE'
+                          ? 'info'
+                          : effectiveStatus === 'CANCELLED' || effectiveStatus === 'EXPIRED'
+                          ? 'danger'
+                          : 'verified'
+                      }
+                    >
+                      {effectiveStatus}
+                    </Badge>
                   </div>
 
-                  <Badge
-                    variant={
-                      ride.status === 'COMPLETED'
-                        ? 'success'
-                        : ride.status === 'IN_PROGRESS' || ride.status === 'STARTED'
-                        ? 'info'
-                        : ride.status === 'CANCELLED'
-                        ? 'danger'
-                        : 'verified'
-                    }
-                  >
-                    {ride.status}
-                  </Badge>
-                </div>
+                  <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <div>Vehicle: <strong>Campus Vehicle</strong></div>
+                    <div>Available Seats: <strong className="text-teal-600 dark:text-teal-400">{ride.available_seats} / {ride.total_seats} Seats</strong></div>
+                    <div>Passenger Requests: <strong className="text-[#1e3a8a] dark:text-cyan-400">{requestCounts[ride.id] || 0} Request(s)</strong></div>
+                    <div>Proximity: <strong>500m Match Engine</strong></div>
+                  </div>
 
-                <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                  <div>Vehicle: <strong>Campus Vehicle</strong></div>
-                  <div>Available Seats: <strong className="text-teal-600 dark:text-teal-400">{ride.available_seats} / {ride.total_seats} Seats</strong></div>
-                  <div>Passenger Requests: <strong className="text-[#1e3a8a] dark:text-cyan-400">{requestCounts[ride.id] || 0} Request(s)</strong></div>
-                  <div>Proximity: <strong>500m Match Engine</strong></div>
-                </div>
-
-                <div className="pt-2 flex justify-between items-center">
-                  <span className="text-xs text-slate-400 font-mono text-[10px]">
-                    Created: {new Date(ride.created_at).toLocaleDateString()}
-                  </span>
-                  <Link href={`/driver/rides/${ride.id}`}>
-                    <Button variant="teal" size="sm" rightIcon={<ChevronRight className="w-4 h-4" />}>
-                      Manage Ride Details
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
-            ))}
+                  <div className="pt-2 flex justify-between items-center">
+                    <span className="text-xs text-slate-400 font-mono text-[10px]">
+                      Created: {new Date(ride.created_at).toLocaleDateString()}
+                    </span>
+                    <Link href={`/driver/rides/${ride.id}`}>
+                      <Button variant="teal" size="sm" rightIcon={<ChevronRight className="w-4 h-4" />}>
+                        Manage Ride Details
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
       </main>
