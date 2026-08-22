@@ -113,6 +113,8 @@ function FindRideContent() {
             initialName={originName}
             initialLat={originLat}
             initialLng={originLng}
+            otherLocationLat={destLat}
+            otherLocationLng={destLng}
             onSelectLocation={(name, lat, lng) => {
               setOriginName(name);
               setOriginLat(lat.toString());
@@ -126,6 +128,8 @@ function FindRideContent() {
             initialName={destName}
             initialLat={destLat}
             initialLng={destLng}
+            otherLocationLat={originLat}
+            otherLocationLng={originLng}
             onSelectLocation={(name, lat, lng) => {
               setDestName(name);
               setDestLat(lat.toString());
