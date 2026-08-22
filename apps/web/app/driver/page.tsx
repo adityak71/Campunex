@@ -46,8 +46,6 @@ export default function DriverDashboardPage() {
 
   // Driver Availability State
   const [isOnline, setIsOnline] = useState(true);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const router = useRouter();
   const { showToast } = useToast();
@@ -82,27 +80,24 @@ export default function DriverDashboardPage() {
 
         setMyRides(processedRides);
 
-        // Fetch requests for published rides
-        let allRequests: any[] = [];
-        for (const ride of processedRides) {
-          try {
-            const reqRes = await apiRequest(`/rides/${ride.id}/requests`);
-            if (reqRes.requests) {
-              allRequests = [...allRequests, ...reqRes.requests];
-            }
-          } catch (e) {
-            // Ignore error for individual ride requests fetch
-          }
+        // Single canonical API call for driver ride requests
+        try {
+          const reqRes = await apiRequest('/rides/driver-requests');
+          setIncomingRequests(reqRes.requests || []);
+        } catch (e) {
+          setIncomingRequests([]);
         }
-        setIncomingRequests(allRequests);
 
         // Fetch trip history log
-        const historyRes = await apiRequest('/trips/history/my-history');
-        setRecentHistory(historyRes.history || []);
+        try {
+          const historyRes = await apiRequest('/trips/history/my-history');
+          setRecentHistory(historyRes.history || []);
+        } catch (e) {
+          setRecentHistory([]);
+        }
       } catch (err: any) {
         const msg = err.message || 'Failed to load driver dashboard data';
         setError(msg);
-        showToast(msg, 'error');
       } finally {
         setLoading(false);
       }
@@ -120,12 +115,6 @@ export default function DriverDashboardPage() {
     } else {
       showToast('⏸️ You are now OFFLINE — Hidden from ride matching results.', 'info');
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('campunex_token');
-    showToast('Signed out successfully', 'info');
-    router.push('/login');
   };
 
   if (loading) {
@@ -148,8 +137,8 @@ export default function DriverDashboardPage() {
   }
 
   // Active / Upcoming / Expired filtering
-  const activeRides = myRides.filter((r) => r.status === 'OPEN' || r.status === 'SEAT_FULL' || r.status === 'ACTIVE');
-  const pendingRequests = incomingRequests.filter((r) => r.status === 'REQUESTED');
+  const activeRides = myRides.filter((r) => r.status === 'OPEN' || r.status === 'SCHEDULED' || r.status === 'SEAT_FULL' || r.status === 'ACTIVE');
+  const pendingRequests = incomingRequests.filter((r) => r.status === 'REQUESTED' || r.status === 'PENDING');
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200 pb-12">
@@ -182,7 +171,7 @@ export default function DriverDashboardPage() {
             <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
               <Link href="/driver/offer">
                 <Button variant="teal" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
-                  + Offer Ride
+                  Offer Ride
                 </Button>
               </Link>
               <Link href="/driver/requests">
@@ -198,6 +187,19 @@ export default function DriverDashboardPage() {
             </div>
           </div>
         </Card>
+
+        {/* Error Alert */}
+        {error && (
+          <div className="p-4 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-2xl text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </div>
+        )}
 
         {/* Driver Availability Switch */}
         <Card className={`p-6 transition-all duration-300 border-2 ${
@@ -285,7 +287,7 @@ export default function DriverDashboardPage() {
               description="You have not published any routes for today. Offer a ride to start receiving rider seat requests."
               action={
                 <Link href="/driver/offer">
-                  <Button variant="teal" size="sm">+ Offer a Ride</Button>
+                  <Button variant="teal" size="sm">Offer a Ride</Button>
                 </Link>
               }
             />
@@ -306,12 +308,12 @@ export default function DriverDashboardPage() {
                         </div>
                         <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
                           <Clock className="w-3.5 h-3.5 text-slate-400" />
-                          <span>Today • {new Date(ride.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span>Departure: {new Date(ride.departure_time).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
                         </div>
                       </div>
 
                       <Badge variant={isFull ? 'danger' : 'success'}>
-                        {isFull ? 'SEAT FULL' : 'OPEN'}
+                        {isFull ? 'SEAT FULL' : ride.status || 'OPEN'}
                       </Badge>
                     </div>
 
