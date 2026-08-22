@@ -1,26 +1,40 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Navbar from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
 import LocationPicker from '../../../components/LocationPicker';
 import Map from '../../../components/Map';
 import MatchBar from '../../../components/MatchBar';
+import Button from '../../../components/ui/Button';
+import Card from '../../../components/ui/Card';
+import Badge from '../../../components/ui/Badge';
+import Skeleton from '../../../components/ui/Skeleton';
+import EmptyState from '../../../components/ui/EmptyState';
+import { useToast } from '../../../components/ui/Toast';
 import { apiRequest } from '../../../lib/api';
-import { Navigation2, Calendar, Clock, User, ShieldCheck, CheckCircle2, MapPin } from 'lucide-react';
+import { Navigation2, Clock, CheckCircle2, Car, Bike } from 'lucide-react';
 
-export default function FindRidePage() {
+function FindRideContent() {
+  const searchParams = useSearchParams();
+  const initialPickupLat = searchParams.get('pickup_lat') || '31.2536';
+  const initialPickupLng = searchParams.get('pickup_lng') || '75.7037';
+  const initialDestLat = searchParams.get('dest_lat') || '31.3260';
+  const initialDestLng = searchParams.get('dest_lng') || '75.5762';
+
   const [originName, setOriginName] = useState('LPU Main Gate');
-  const [originLat, setOriginLat] = useState('31.2536');
-  const [originLng, setOriginLng] = useState('75.7037');
+  const [originLat, setOriginLat] = useState(initialPickupLat);
+  const [originLng, setOriginLng] = useState(initialPickupLng);
 
   const [destName, setDestName] = useState('Jalandhar City Railway Station');
-  const [destLat, setDestLat] = useState('31.3260');
-  const [destLng, setDestLng] = useState('75.5762');
+  const [destLat, setDestLat] = useState(initialDestLat);
+  const [destLng, setDestLng] = useState(initialDestLng);
 
   const [matches, setMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [requestStatus, setRequestStatus] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const handleSearch = async () => {
     setLoading(true);
@@ -35,12 +49,22 @@ export default function FindRidePage() {
 
       const res = await apiRequest(`/rides/matches?${queryParams.toString()}`);
       setMatches(res.matches || []);
+      if (res.matches && res.matches.length > 0) {
+        showToast(`Found ${res.matches.length} matching ride(s)!`, 'success');
+      } else {
+        showToast('No matching rides found within 500m threshold.', 'info');
+      }
     } catch (err: any) {
-      console.error('Search error:', err);
+      const errMsg = err.message || 'Failed to fetch ride matches';
+      showToast(errMsg, 'error');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    handleSearch();
+  }, []);
 
   const handleRequestRide = async (rideId: string) => {
     try {
@@ -54,153 +78,163 @@ export default function FindRidePage() {
         }),
       });
 
-      setRequestStatus(res.message || 'Ride requested successfully!');
+      const msg = res.message || 'Ride requested successfully!';
+      setRequestStatus(msg);
+      showToast(msg, 'success');
     } catch (err: any) {
-      setRequestStatus(`Request Failed: ${err.message}`);
+      const errMsg = `Request Failed: ${err.message}`;
+      setRequestStatus(errMsg);
+      showToast(errMsg, 'error');
     }
   };
 
-  const originPoint = { latitude: parseFloat(originLat), longitude: parseFloat(originLng) };
-  const destPoint = { latitude: parseFloat(destLat), longitude: parseFloat(destLng) };
+  return (
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-8 w-full">
+      <div className="space-y-2">
+        <Badge variant="info">500m ROUTE PROXIMITY</Badge>
+        <h1 className="text-3xl font-extrabold text-[#1e3a8a] dark:text-cyan-300 tracking-tight">
+          Find Campus Rides Near You
+        </h1>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Search campus landmarks or street addresses — real-time route matching within 500m proximity
+        </p>
+      </div>
 
+      {/* Search Autocomplete Form */}
+      <Card className="space-y-6">
+        <div className="space-y-6">
+          <h2 className="text-xs font-bold text-[#1e3a8a] dark:text-cyan-300 uppercase tracking-wider">
+            1. Route Location Autocomplete
+          </h2>
+
+          <LocationPicker
+            label="Pickup Location / Landmark"
+            placeholder="Type pickup location (e.g., LPU Main Gate)..."
+            initialName={originName}
+            initialLat={originLat}
+            initialLng={originLng}
+            onSelectLocation={(name, lat, lng) => {
+              setOriginName(name);
+              setOriginLat(lat.toString());
+              setOriginLng(lng.toString());
+            }}
+          />
+
+          <LocationPicker
+            label="Destination Location / Landmark"
+            placeholder="Type destination location (e.g., Jalandhar Railway Station)..."
+            initialName={destName}
+            initialLat={destLat}
+            initialLng={destLng}
+            onSelectLocation={(name, lat, lng) => {
+              setDestName(name);
+              setDestLat(lat.toString());
+              setDestLng(lng.toString());
+            }}
+          />
+        </div>
+
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            Proximity Threshold: <strong className="text-[#1e3a8a] dark:text-cyan-300">500 meters (Route Overlap)</strong>
+          </div>
+
+          <Button
+            onClick={handleSearch}
+            isLoading={loading}
+            variant="teal"
+            size="md"
+          >
+            🔍 Search Matching Rides
+          </Button>
+        </div>
+      </Card>
+
+      {/* Matches Section */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-bold text-[#1e3a8a] dark:text-cyan-300">
+            Available Rides ({matches.length})
+          </h2>
+        </div>
+
+        {requestStatus && (
+          <div className="p-4 bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 rounded-2xl text-teal-800 dark:text-teal-300 text-xs font-bold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-teal-600" /> {requestStatus}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </div>
+        ) : matches.length === 0 ? (
+          <EmptyState
+            title="No driver route overlap found within 500m threshold"
+            description="Select your pickup & dropoff addresses above to query available driver routes."
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {matches.map((match) => (
+              <Card key={match.ride_id} hoverable className="p-6 space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 flex items-center justify-center font-bold text-sm">
+                      {match.driver_name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                        {match.driver_name}
+                        <Badge variant="verified">Verified</Badge>
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">Seats: {match.available_seats} Available</div>
+                    </div>
+                  </div>
+                </div>
+
+                <MatchBar matchScore={match.match_score} />
+
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                    <Navigation2 className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" />
+                    <span>{match.origin_name} ➔ {match.destination_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                    <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>Departure: {new Date(match.departure_time).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                  <div>Pickup Proximity: <strong className="text-teal-600 dark:text-teal-400">{Math.round(match.pickup_distance)}m</strong></div>
+                  <div>Destination Proximity: <strong className="text-teal-600 dark:text-teal-400">{Math.round(match.dest_distance)}m</strong></div>
+                </div>
+
+                <Button
+                  onClick={() => handleRequestRide(match.ride_id)}
+                  variant="teal"
+                  size="sm"
+                  className="w-full"
+                >
+                  Request Ride Seat
+                </Button>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
+
+export default function FindRidePage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       <Navbar />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-8 w-full">
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#e0f2fe] dark:bg-cyan-950/80 text-[#1e3a8a] dark:text-cyan-300 border border-[#bae6fd] dark:border-cyan-800 rounded-full text-xs font-bold">
-            <Navigation2 className="w-3.5 h-3.5" /> 500m ROUTE PROXIMITY
-          </div>
-          <h1 className="text-3xl font-extrabold text-[#1e3a8a] dark:text-cyan-300 tracking-tight">
-            Find Campus Rides Near You
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Search campus landmarks or street addresses — real-time route matching within 500m proximity
-          </p>
-        </div>
-
-        {/* Search Input Card */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="space-y-6">
-            <h2 className="text-xs font-bold text-[#1e3a8a] dark:text-cyan-300 uppercase tracking-wider">1. Route Location Autocomplete</h2>
-
-            <LocationPicker
-              label="Pickup Location / Landmark"
-              placeholder="Type pickup location (e.g., LPU Main Gate)..."
-              initialName={originName}
-              initialLat={originLat}
-              initialLng={originLng}
-              onSelectLocation={(name, lat, lng) => {
-                setOriginName(name);
-                setOriginLat(lat.toString());
-                setOriginLng(lng.toString());
-              }}
-            />
-
-            <LocationPicker
-              label="Destination Location / Landmark"
-              placeholder="Type destination location (e.g., Jalandhar Railway Station)..."
-              initialName={destName}
-              initialLat={destLat}
-              initialLng={destLng}
-              onSelectLocation={(name, lat, lng) => {
-                setDestName(name);
-                setDestLat(lat.toString());
-                setDestLng(lng.toString());
-              }}
-            />
-          </div>
-
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="text-xs text-slate-500 dark:text-slate-400">
-              Proximity Threshold: <strong className="text-[#1e3a8a] dark:text-cyan-300">500 meters (Route Overlap)</strong>
-            </div>
-
-            <button
-              onClick={handleSearch}
-              disabled={loading}
-              className="w-full md:w-auto px-6 py-3 bg-[#1e3a8a] dark:bg-cyan-600 hover:bg-[#1d3271] dark:hover:bg-cyan-500 text-white font-bold rounded-xl shadow-md transition disabled:opacity-50 text-xs flex items-center justify-center gap-2"
-            >
-              {loading ? 'Searching Rides...' : '🔍 Search Matching Rides'}
-            </button>
-          </div>
-        </div>
-
-        {/* Matches Section */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-bold text-[#1e3a8a] dark:text-cyan-300">
-              Available Rides ({matches.length})
-            </h2>
-          </div>
-
-          {requestStatus && (
-            <div className="p-4 bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 rounded-2xl text-teal-800 dark:text-teal-300 text-xs font-bold flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-teal-600" /> {requestStatus}
-            </div>
-          )}
-
-          {matches.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center text-slate-500 dark:text-slate-400 space-y-3 shadow-sm">
-              <p className="text-sm font-semibold">No driver route overlap found within 500m threshold.</p>
-              <p className="text-xs text-slate-400">Select your pickup & dropoff addresses above to query available driver routes.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {matches.map((match) => (
-                <div
-                  key={match.ride_id}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm hover:shadow-md transition"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 flex items-center justify-center font-bold text-sm">
-                        {match.driver_name.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                          {match.driver_name}
-                          <span className="text-[10px] bg-teal-50 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 px-1.5 py-0.2 rounded-full font-semibold">
-                            Verified
-                          </span>
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">Seats: {match.available_seats} Available</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <MatchBar matchScore={match.match_score} />
-
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                      <Navigation2 className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" />
-                      <span>{match.origin_name} ➔ {match.destination_name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                      <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>Departure: {new Date(match.departure_time).toLocaleString()}</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <div>Pickup Proximity: <strong className="text-teal-600 dark:text-teal-400">{Math.round(match.pickup_distance)}m</strong></div>
-                    <div>Destination Proximity: <strong className="text-teal-600 dark:text-teal-400">{Math.round(match.dest_distance)}m</strong></div>
-                  </div>
-
-                  <button
-                    onClick={() => handleRequestRide(match.ride_id)}
-                    className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs transition shadow-sm"
-                  >
-                    Request Ride Seat
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
-
+      <Suspense fallback={<div className="p-8 text-center">Loading matches...</div>}>
+        <FindRideContent />
+      </Suspense>
       <Footer />
     </div>
   );

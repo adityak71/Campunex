@@ -4,214 +4,310 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import LocationPicker from '../../components/LocationPicker';
+import Button from '../../components/ui/Button';
+import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
+import Skeleton from '../../components/ui/Skeleton';
+import EmptyState from '../../components/ui/EmptyState';
 import { apiRequest } from '../../lib/api';
-import { User, Ride } from '@campunex/shared';
-import { ShieldCheck, Plus, Search, Car, Bike, Clock, Calendar, ChevronRight, CheckCircle2, Navigation2 } from 'lucide-react';
+import { User } from '@campunex/shared';
+import {
+  Navigation2,
+  Car,
+  Bike,
+  ShieldCheck,
+  Search,
+  Plus,
+  Clock,
+  CheckCircle2,
+  ChevronRight,
+  User as UserIcon,
+  Calendar
+} from 'lucide-react';
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
-  const [myRides, setMyRides] = useState<Ride[]>([]);
+  const [rides, setRides] = useState<any[]>([]);
   const [myRequests, setMyRequests] = useState<any[]>([]);
+  const [myRides, setMyRides] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [pickupName, setPickupName] = useState('LPU Main Gate');
+  const [pickupLat, setPickupLat] = useState('31.2536');
+  const [pickupLng, setPickupLng] = useState('75.7037');
+
+  const [dropoffName, setDropoffName] = useState('Jalandhar City Railway Station');
+  const [dropoffLat, setDropoffLat] = useState('31.3260');
+  const [dropoffLng, setDropoffLng] = useState('75.5762');
+
+  const [vehicleFilter, setVehicleFilter] = useState<'ALL' | 'CAR' | 'BIKE'>('ALL');
+
   useEffect(() => {
-    async function loadData() {
+    async function loadDashboardData() {
       try {
         const meRes = await apiRequest('/auth/me');
         setUser(meRes.user);
 
         if (meRes.user.role === 'DRIVER') {
-          const ridesRes = await apiRequest('/rides/my-rides');
-          setMyRides(ridesRes.rides || []);
+          const driverRides = await apiRequest('/rides/my-rides');
+          setMyRides(driverRides.rides || []);
         } else {
-          const reqsRes = await apiRequest('/rides/requests/my-requests');
-          setMyRequests(reqsRes.requests || []);
+          const reqRes = await apiRequest('/rides/requests/my-requests');
+          setMyRequests(reqRes.requests || []);
         }
       } catch (err) {
-        console.error('Failed to load dashboard data:', err);
+        console.error('Failed to load dashboard:', err);
       } finally {
         setLoading(false);
       }
     }
-    loadData();
+    loadDashboardData();
   }, []);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans">
         <Navbar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1e3a8a]"></div>
-        </div>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-6 w-full">
+          <Skeleton className="h-28 w-full" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }
 
+  const isDriver = user?.role === 'DRIVER';
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-8 w-full">
-        {/* Welcome Banner */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+        {/* Welcome Header */}
+        <Card className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1e3a8a] flex items-center gap-2">
-              Hello, {user?.name}! <span className="text-[#14b8a6]">👋</span>
-            </h1>
-            <p className="text-xs text-slate-500">
-              Campus Ride-Matching Platform • Smart Route Matching
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-[#1e3a8a] dark:text-cyan-300">
+                Welcome back, {user?.name}! 👋
+              </h1>
+              <Badge variant={user?.verification_status === 'VERIFIED' ? 'verified' : 'warning'}>
+                {user?.verification_status === 'VERIFIED' ? 'Verified Campus Member' : 'Pending Verification'}
+              </Badge>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Campus Ride-Matching Platform • Smart 500m Route Proximity
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            {user?.role === 'DRIVER' ? (
-              <Link
-                href="/rides/create"
-                className="px-5 py-2.5 bg-[#14b8a6] hover:bg-[#0d9488] text-white font-bold rounded-xl text-xs shadow-md transition flex items-center gap-1.5"
-              >
-                <Plus className="w-4 h-4" /> Offer New Ride
+            {isDriver ? (
+              <Link href="/rides/create">
+                <Button variant="teal" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
+                  Offer a Campus Ride
+                </Button>
               </Link>
             ) : (
-              <Link
-                href="/rides/find"
-                className="px-5 py-2.5 bg-[#1e3a8a] hover:bg-[#1d3271] text-white font-bold rounded-xl text-xs shadow-md transition flex items-center gap-1.5"
-              >
-                <Search className="w-4 h-4" /> Find Campus Ride
+              <Link href="/rides/find">
+                <Button variant="primary" size="sm" leftIcon={<Search className="w-4 h-4" />}>
+                  Find Rides Near You
+                </Button>
               </Link>
             )}
+          </div>
+        </Card>
+
+        {/* Quick Search Card for Riders */}
+        {!isDriver && (
+          <Card className="space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h2 className="text-sm font-bold text-[#1e3a8a] dark:text-cyan-300 flex items-center gap-2">
+                <Search className="w-4 h-4 text-teal-600 dark:text-cyan-400" /> Find Compatible Campus Rides
+              </h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setVehicleFilter('ALL')}
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition ${
+                    vehicleFilter === 'ALL'
+                      ? 'bg-teal-50 dark:bg-cyan-950 text-teal-700 dark:text-cyan-300 border-teal-300 dark:border-cyan-800'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  All Rides
+                </button>
+                <button
+                  onClick={() => setVehicleFilter('CAR')}
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition flex items-center gap-1 ${
+                    vehicleFilter === 'CAR'
+                      ? 'bg-teal-50 dark:bg-cyan-950 text-teal-700 dark:text-cyan-300 border-teal-300 dark:border-cyan-800'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  <Car className="w-3 h-3" /> Car
+                </button>
+                <button
+                  onClick={() => setVehicleFilter('BIKE')}
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition flex items-center gap-1 ${
+                    vehicleFilter === 'BIKE'
+                      ? 'bg-teal-50 dark:bg-cyan-950 text-teal-700 dark:text-cyan-300 border-teal-300 dark:border-cyan-800'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  <Bike className="w-3 h-3" /> Bike
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <LocationPicker
+                label="Pickup Landmark"
+                placeholder="Select pickup address..."
+                initialName={pickupName}
+                initialLat={pickupLat}
+                initialLng={pickupLng}
+                onSelectLocation={(name, lat, lng) => {
+                  setPickupName(name);
+                  setPickupLat(lat.toString());
+                  setPickupLng(lng.toString());
+                }}
+              />
+
+              <LocationPicker
+                label="Destination Landmark"
+                placeholder="Select destination address..."
+                initialName={dropoffName}
+                initialLat={dropoffLat}
+                initialLng={dropoffLng}
+                onSelectLocation={(name, lat, lng) => {
+                  setDropoffName(name);
+                  setDropoffLat(lat.toString());
+                  setDropoffLng(lng.toString());
+                }}
+              />
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <Link
+                href={`/rides/find?pickup_lat=${pickupLat}&pickup_lng=${pickupLng}&dest_lat=${dropoffLat}&dest_lng=${dropoffLng}`}
+              >
+                <Button variant="teal" size="md" rightIcon={<ChevronRight className="w-4 h-4" />}>
+                  Search Matches Near 500m
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        )}
+
+        {/* Dashboard Sections */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Active / Requested Rides */}
+          <div className="space-y-4">
+            <h2 className="text-base font-bold text-[#1e3a8a] dark:text-cyan-300">
+              {isDriver ? 'My Published Rides' : 'My Ride Requests'}
+            </h2>
+
+            {isDriver ? (
+              myRides.length === 0 ? (
+                <EmptyState
+                  title="No active rides published"
+                  description="Offer seats along your daily commute to help fellow students."
+                  action={
+                    <Link href="/rides/create">
+                      <Button variant="primary" size="sm">Offer Ride</Button>
+                    </Link>
+                  }
+                />
+              ) : (
+                <div className="space-y-3">
+                  {myRides.map((ride) => (
+                    <Card key={ride.id} hoverable className="p-4 space-y-2">
+                      <div className="flex justify-between items-start">
+                        <div className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                          {ride.origin_name} ➔ {ride.destination_name}
+                        </div>
+                        <Badge variant="success">{ride.available_seats} Seats Left</Badge>
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">
+                        Departure: {new Date(ride.departure_time).toLocaleString()}
+                      </div>
+                      <div className="pt-2 flex justify-end">
+                        <Link href={`/rides/requests?rideId=${ride.id}`}>
+                          <Button variant="outline" size="sm">Manage Requests</Button>
+                        </Link>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )
+            ) : (
+              myRequests.length === 0 ? (
+                <EmptyState
+                  title="No active ride requests"
+                  description="Search available driver routes and request a seat."
+                  action={
+                    <Link href="/rides/find">
+                      <Button variant="teal" size="sm">Find Rides</Button>
+                    </Link>
+                  }
+                />
+              ) : (
+                <div className="space-y-3">
+                  {myRequests.map((req) => (
+                    <Card key={req.id} hoverable className="p-4 space-y-2">
+                      <div className="flex justify-between items-start">
+                        <div className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                          {req.origin_name} ➔ {req.destination_name}
+                        </div>
+                        <Badge variant={req.status === 'ACCEPTED' ? 'success' : 'pending'}>
+                          {req.status}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">Driver: {req.driver_name}</div>
+                      {req.trip_id && (
+                        <div className="pt-2">
+                          <Link href={`/trip/${req.trip_id}`}>
+                            <Button variant="teal" size="sm" className="w-full">
+                              Open Live Tracking
+                            </Button>
+                          </Link>
+                        </div>
+                      )}
+                    </Card>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+
+          {/* Quick Actions & Recent Log */}
+          <div className="space-y-4">
+            <h2 className="text-base font-bold text-[#1e3a8a] dark:text-cyan-300">Quick Actions & History</h2>
+            <Card className="space-y-3 p-5">
+              <Link href="/history" className="block">
+                <div className="p-3 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl transition flex justify-between items-center text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <span>📜 View Full Trip History Log</span>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                </div>
+              </Link>
+              <Link href="/profile" className="block">
+                <div className="p-3 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl transition flex justify-between items-center text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <span>👤 Campus Identity & Verification Profile</span>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                </div>
+              </Link>
+              <Link href="/safety" className="block">
+                <div className="p-3 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl transition flex justify-between items-center text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <span>🛡️ Safety Center & OTP Guidelines</span>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                </div>
+              </Link>
+            </Card>
           </div>
         </div>
-
-        {/* Verification Status Banner */}
-        {user?.verification_status !== 'VERIFIED' && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between text-amber-800 text-xs font-semibold">
-            <span>
-              ⚠️ Your campus identity is unverified. Verify your institutional email to publish rides & submit requests.
-            </span>
-            <Link
-              href="/verify"
-              className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold transition shadow-sm"
-            >
-              Verify Identity
-            </Link>
-          </div>
-        )}
-
-        {/* Driver Section */}
-        {user?.role === 'DRIVER' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold text-[#1e3a8a]">My Published Campus Rides</h2>
-              <Link href="/rides/create" className="text-xs text-teal-600 font-bold hover:underline">
-                + Offer New Ride
-              </Link>
-            </div>
-
-            {myRides.length === 0 ? (
-              <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center text-slate-500 text-xs space-y-3 shadow-sm">
-                <p>You haven't offered any rides yet.</p>
-                <Link href="/rides/create" className="inline-block px-4 py-2 bg-[#1e3a8a] text-white rounded-xl text-xs font-bold shadow">
-                  Offer Your First Campus Ride
-                </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {myRides.map((ride) => (
-                  <div
-                    key={ride.id}
-                    className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 hover:shadow-md transition shadow-sm flex flex-col justify-between"
-                  >
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-start">
-                        <span className="px-2.5 py-0.5 bg-[#e0f2fe] text-[#1e3a8a] text-[10px] font-bold rounded-full border border-[#bae6fd]">
-                          STATUS: {ride.status}
-                        </span>
-                        <span className="text-xs font-bold text-teal-600">
-                          🪑 {ride.available_seats} / {ride.total_seats} seats left
-                        </span>
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="text-xs text-slate-400 font-semibold uppercase">ROUTE</div>
-                        <div className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                          <Navigation2 className="w-4 h-4 text-teal-500 flex-shrink-0" />
-                          <span>{ride.origin_name} ➔ {ride.destination_name}</span>
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-slate-500 space-y-1 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                        <div className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-slate-400" /> {new Date(ride.departure_time).toLocaleString()}</div>
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
-                      <Link
-                        href={`/rides/requests?rideId=${ride.id}`}
-                        className="text-xs text-[#1e3a8a] hover:underline font-bold flex items-center gap-1"
-                      >
-                        View Incoming Requests <ChevronRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Rider Section */}
-        {user?.role === 'RIDER' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold text-[#1e3a8a]">My Requested Rides</h2>
-              <Link href="/rides/find" className="text-xs text-teal-600 font-bold hover:underline">
-                🔍 Find Rides (500m PostGIS)
-              </Link>
-            </div>
-
-            {myRequests.length === 0 ? (
-              <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center text-slate-500 text-xs space-y-3 shadow-sm">
-                <p>No ride requests submitted yet.</p>
-                <Link href="/rides/find" className="inline-block px-4 py-2 bg-[#1e3a8a] text-white rounded-xl text-xs font-bold shadow">
-                  Search Rides Near You
-                </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {myRequests.map((req) => (
-                  <div
-                    key={req.id}
-                    className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm hover:shadow-md transition flex flex-col justify-between"
-                  >
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="text-[10px] text-slate-400 font-bold uppercase">DRIVER</div>
-                          <div className="text-sm font-bold text-slate-900">{req.driver_name}</div>
-                        </div>
-
-                        <span
-                          className={`px-2.5 py-1 text-[10px] font-bold rounded-full border ${
-                            req.status === 'ACCEPTED'
-                              ? 'bg-teal-50 text-teal-700 border-teal-200'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}
-                        >
-                          {req.status}
-                        </span>
-                      </div>
-
-                      <div className="text-xs text-slate-600 space-y-1 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                        <div>📍 {req.origin_name} ➔ {req.destination_name}</div>
-                        <div>🕒 {new Date(req.departure_time).toLocaleString()}</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </main>
 
       <Footer />
