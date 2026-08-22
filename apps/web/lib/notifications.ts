@@ -1,5 +1,32 @@
 import { NotificationPayload, NotificationCategory, NotificationPriority, NotificationState } from '@campunex/shared';
 
+// Module-scoped persistent set of processed toast IDs across navigations and remounts
+export const processedToastIdsSet = new Set<string>();
+
+/**
+ * Triggers a toast alert ONLY if the notification ID has NEVER been toasted in this browser session.
+ */
+export function triggerNotificationToast(
+  item: NotificationPayload,
+  showToastFn: (msg: string, type?: 'info' | 'success' | 'error') => void
+): boolean {
+  // Ignore duplicate toasts or background coordinate / connection events
+  if (!item.id || processedToastIdsSet.has(item.id)) {
+    return false;
+  }
+  if (item.type === 'GPS_UPDATE' || item.type === 'WEBSOCKET_RECONNECT') {
+    return false;
+  }
+
+  // Mark as processed permanently for session
+  processedToastIdsSet.add(item.id);
+
+  // Trigger single toast popup
+  const toastType = item.state === 'SUCCESS' ? 'success' : item.state === 'WARNING' || item.state === 'CRITICAL' ? 'error' : 'info';
+  showToastFn(`🔔 ${item.title}`, toastType);
+  return true;
+}
+
 // Comprehensive Seed Notifications for Rider
 export const SEED_RIDER_NOTIFICATIONS: NotificationPayload[] = [
   // RIDE MATCHING

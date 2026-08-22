@@ -13,6 +13,7 @@ import authRoutes from './routes/auth.routes.js';
 import ridesRoutes from './routes/rides.routes.js';
 import tripsRoutes from './routes/trips.routes.js';
 import devRoutes from './routes/dev.routes.js';
+import notificationsRoutes from './routes/notifications.routes.js';
 import { initializeWebSocketHandlers } from './modules/websocket/socket.handler.js';
 import { HealthCheckResponse } from '@campunex/shared';
 
@@ -45,6 +46,7 @@ app.use(cookieParser());
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/rides', ridesRoutes);
 app.use('/api/v1/trips', tripsRoutes);
+app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/dev', devRoutes);
 
 // Health Check Endpoint

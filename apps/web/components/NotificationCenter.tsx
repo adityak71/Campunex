@@ -3,18 +3,20 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bell, Check, Trash2, X, ShieldAlert, Car, UserCheck, AlertTriangle, Settings, ChevronRight, Navigation2, ShieldCheck, Info } from 'lucide-react';
+import { Bell, Check, Trash2, X, ShieldAlert, Car, UserCheck, Settings, ChevronRight, Navigation2, ShieldCheck, Info } from 'lucide-react';
 import Badge from './ui/Badge';
 import Button from './ui/Button';
 import { NotificationPayload } from '@campunex/shared';
-import { SEED_RIDER_NOTIFICATIONS, SEED_DRIVER_NOTIFICATIONS, deduplicateNotifications } from '../lib/notifications';
+import { SEED_RIDER_NOTIFICATIONS, SEED_DRIVER_NOTIFICATIONS, deduplicateNotifications, triggerNotificationToast } from '../lib/notifications';
 import { getSocketClient } from '../lib/socket';
+import { apiRequest } from '../lib/api';
 import { useToast } from './ui/Toast';
 
 export default function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const isDriverRoute = pathname.startsWith('/driver');
+  const roleContext = isDriverRoute ? 'DRIVER' : 'RIDER';
 
   const [notifications, setNotifications] = useState<NotificationPayload[]>(() =>
     deduplicateNotifications(isDriverRoute ? SEED_DRIVER_NOTIFICATIONS : SEED_RIDER_NOTIFICATIONS)
@@ -22,64 +24,89 @@ export default function NotificationCenter() {
 
   const { showToast } = useToast();
 
+  // Load persistent notifications from API or fallback
+  const fetchNotifications = async () => {
+    try {
+      const res = await apiRequest(`/notifications?role=${roleContext}`);
+      if (res.notifications && Array.isArray(res.notifications)) {
+        setNotifications(deduplicateNotifications(res.notifications));
+      }
+    } catch (err) {
+      // Fallback to seed state if dev API is unseeded
+      setNotifications((prev) =>
+        deduplicateNotifications(prev.length > 0 ? prev : isDriverRoute ? SEED_DRIVER_NOTIFICATIONS : SEED_RIDER_NOTIFICATIONS)
+      );
+    }
+  };
+
   useEffect(() => {
-    // Update role notifications when route changes
-    setNotifications(
-      deduplicateNotifications(isDriverRoute ? SEED_DRIVER_NOTIFICATIONS : SEED_RIDER_NOTIFICATIONS)
-    );
-  }, [isDriverRoute]);
+    fetchNotifications();
+  }, [roleContext, pathname]);
 
   // Real-time WebSocket listener with deduplication & noise prevention
   useEffect(() => {
     const socket = getSocketClient();
 
     const handleNewNotification = (data: NotificationPayload) => {
-      // Ignore GPS coordinate updates or connection events from creating notifications
+      // Ignore background GPS coordinates or WebSocket reconnect status
       if (data.type === 'GPS_UPDATE' || data.type === 'WEBSOCKET_RECONNECT') return;
+      if (data.role !== roleContext && data.role !== 'BOTH') return;
 
       setNotifications((prev) => {
-        // Safe deduplication by ID
         if (prev.some((item) => item.id === data.id)) return prev;
 
-        // Subtle Toast alert without workflow interruption
-        showToast(`🔔 ${data.title}`, 'info');
+        // Trigger single toast popup ONCE per unique event ID
+        triggerNotificationToast(data, showToast);
 
         return [data, ...prev];
       });
     };
 
     socket.on('notification:new', handleNewNotification);
-    socket.on('ride_request_accepted', (payload: any) => {
-      handleNewNotification({
-        id: `socket_acc_${Date.now()}`,
-        role: 'RIDER',
-        category: 'REQUEST',
-        type: 'REQUEST_ACCEPTED',
-        title: 'Ride Request Accepted',
-        message: 'Your seat request has been accepted by the driver.',
-        timestamp: 'Just now',
-        read: false,
-        state: 'SUCCESS',
-        priority: 'HIGH',
-        link: '/rides/requests',
-        action_label: 'View Ride',
-      });
-    });
 
     return () => {
       socket.off('notification:new', handleNewNotification);
     };
-  }, [showToast]);
+  }, [roleContext, showToast]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    showToast('Notifications marked as read', 'info');
+  // Persist single read state server-side with optimistic update & revert on failure
+  const markAsRead = async (id: string) => {
+    const originalNotifications = [...notifications];
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true, state: 'READ' } : n))
+    );
+
+    try {
+      await apiRequest(`/notifications/${id}/read`, { method: 'PATCH' });
+    } catch (err: any) {
+      setNotifications(originalNotifications);
+      showToast('Failed to save read status on server', 'error');
+    }
   };
 
-  const deleteNotification = (id: string) => {
+  // Persist mark-all-read server-side
+  const markAllAsRead = async () => {
+    const originalNotifications = [...notifications];
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true, state: 'READ' })));
+
+    try {
+      await apiRequest(`/notifications/read-all?role=${roleContext}`, { method: 'PATCH' });
+      showToast('All notifications marked as read', 'info');
+    } catch (err: any) {
+      setNotifications(originalNotifications);
+      showToast('Failed to mark all as read on server', 'error');
+    }
+  };
+
+  const deleteNotification = async (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
+    try {
+      await apiRequest(`/notifications/${id}`, { method: 'DELETE' });
+    } catch (e) {
+      // Silently handle delete fallback
+    }
   };
 
   const getIcon = (category: NotificationPayload['category']) => {
@@ -164,7 +191,10 @@ export default function NotificationCenter() {
               notifications.slice(0, 5).map((item) => (
                 <div
                   key={item.id}
-                  className={`p-3.5 flex items-start gap-3 transition ${
+                  onClick={() => {
+                    if (!item.read) markAsRead(item.id);
+                  }}
+                  className={`p-3.5 flex items-start gap-3 transition cursor-pointer ${
                     !item.read ? 'bg-teal-50/40 dark:bg-cyan-950/20' : 'hover:bg-slate-50 dark:hover:bg-slate-900'
                   }`}
                 >
@@ -181,7 +211,10 @@ export default function NotificationCenter() {
                     {item.link && (
                       <Link
                         href={item.link}
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => {
+                          if (!item.read) markAsRead(item.id);
+                          setIsOpen(false);
+                        }}
                         className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-600 dark:text-cyan-400 hover:underline pt-1"
                       >
                         {item.action_label || 'View Details'} <ChevronRight className="w-3 h-3" />
@@ -191,7 +224,10 @@ export default function NotificationCenter() {
 
                   <button
                     type="button"
-                    onClick={() => deleteNotification(item.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteNotification(item.id);
+                    }}
                     className="text-slate-300 hover:text-rose-500 p-1"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
