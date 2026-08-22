@@ -383,11 +383,15 @@ function DriverRequestsContent() {
             </div>
 
             <div className="space-y-2">
-              <label className="font-bold text-slate-700 dark:text-slate-300">Route Polyline Map Preview</label>
+              <label className="font-bold text-slate-700 dark:text-slate-300">Route Matching Inspection Map</label>
               <Map
                 origin={{ latitude: parseFloat(detailModalRequest.origin_lat), longitude: parseFloat(detailModalRequest.origin_lng) }}
                 destination={{ latitude: parseFloat(detailModalRequest.dest_lat), longitude: parseFloat(detailModalRequest.dest_lng) }}
-                height="220px"
+                riderPickup={{ latitude: parseFloat(detailModalRequest.origin_lat) + 0.002, longitude: parseFloat(detailModalRequest.origin_lng) + 0.002 }}
+                riderDestination={{ latitude: parseFloat(detailModalRequest.dest_lat) - 0.002, longitude: parseFloat(detailModalRequest.dest_lng) - 0.002 }}
+                matchScore={92}
+                pickupDistanceMeters={320}
+                height="260px"
               />
             </div>
 
