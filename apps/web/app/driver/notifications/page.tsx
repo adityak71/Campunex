@@ -2,16 +2,16 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
-import Button from '../../components/ui/Button';
-import Card from '../../components/ui/Card';
-import Badge from '../../components/ui/Badge';
-import Input from '../../components/ui/Input';
-import EmptyState from '../../components/ui/EmptyState';
-import { useToast } from '../../components/ui/Toast';
+import Navbar from '../../../components/Navbar';
+import Footer from '../../../components/Footer';
+import Button from '../../../components/ui/Button';
+import Card from '../../../components/ui/Card';
+import Badge from '../../../components/ui/Badge';
+import Input from '../../../components/ui/Input';
+import EmptyState from '../../../components/ui/EmptyState';
+import { useToast } from '../../../components/ui/Toast';
 import { NotificationPayload, NotificationCategory } from '@campunex/shared';
-import { SEED_RIDER_NOTIFICATIONS, deduplicateNotifications } from '../../lib/notifications';
+import { SEED_DRIVER_NOTIFICATIONS, deduplicateNotifications } from '../../../lib/notifications';
 import {
   Bell,
   CheckCircle2,
@@ -25,14 +25,16 @@ import {
   Check,
   Trash2,
   Search,
-  ChevronRight
+  ChevronRight,
+  UserCheck,
+  AlertTriangle
 } from 'lucide-react';
 
-export default function NotificationsPage() {
+export default function DriverNotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationPayload[]>(
-    deduplicateNotifications(SEED_RIDER_NOTIFICATIONS)
+    deduplicateNotifications(SEED_DRIVER_NOTIFICATIONS)
   );
-  const [filterTab, setFilterTab] = useState<'ALL' | 'UNREAD' | 'RIDE' | 'TRIP' | 'SAFETY' | 'ACCOUNT'>('ALL');
+  const [filterTab, setFilterTab] = useState<'ALL' | 'UNREAD' | 'REQUEST' | 'TRIP' | 'SAFETY' | 'ACCOUNT'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   const { showToast } = useToast();
@@ -41,7 +43,7 @@ export default function NotificationsPage() {
 
   const markAllAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true, state: 'READ' })));
-    showToast('All rider notifications marked as read', 'info');
+    showToast('All driver notifications marked as read', 'info');
   };
 
   const toggleReadStatus = (id: string) => {
@@ -56,7 +58,7 @@ export default function NotificationsPage() {
   };
 
   const filteredNotifications = notifications.filter((n) => {
-    // Search filter
+    // Search query match
     if (
       searchQuery &&
       !n.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
@@ -66,8 +68,8 @@ export default function NotificationsPage() {
     }
 
     if (filterTab === 'UNREAD') return !n.read;
-    if (filterTab === 'RIDE') return n.category === 'RIDE' || n.category === 'REQUEST';
-    if (filterTab === 'TRIP') return n.category === 'TRIP';
+    if (filterTab === 'REQUEST') return n.category === 'REQUEST';
+    if (filterTab === 'TRIP') return n.category === 'TRIP' || n.category === 'RIDE';
     if (filterTab === 'SAFETY') return n.category === 'SAFETY';
     if (filterTab === 'ACCOUNT') return n.category === 'ACCOUNT' || n.category === 'SYSTEM';
 
@@ -89,9 +91,10 @@ export default function NotificationsPage() {
 
   const getCategoryIcon = (category: NotificationCategory) => {
     switch (category) {
-      case 'RIDE':
       case 'REQUEST':
-        return <Car className="w-5 h-5 text-teal-600 dark:text-cyan-400" />;
+        return <UserCheck className="w-5 h-5 text-teal-600 dark:text-cyan-400" />;
+      case 'RIDE':
+        return <Car className="w-5 h-5 text-teal-500" />;
       case 'TRIP':
         return <Navigation2 className="w-5 h-5 text-emerald-500" />;
       case 'SAFETY':
@@ -111,12 +114,12 @@ export default function NotificationsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="space-y-1">
-            <Badge variant="info">RIDER NOTIFICATION CENTER</Badge>
+            <Badge variant="info">DRIVER NOTIFICATION CENTER</Badge>
             <h1 className="text-3xl font-extrabold text-[#1e3a8a] dark:text-cyan-300 tracking-tight mt-1">
-              Rider Notifications & Alerts
+              Driver Notifications & Requests
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Real-time updates for compatible driver routes, seat request acceptances, and active trip updates
+              Manage incoming seat requests, trip status alerts, vehicle verifications, and safety advisories
             </p>
           </div>
 
@@ -137,7 +140,7 @@ export default function NotificationsPage() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             {/* Filter Chips */}
             <div className="flex flex-wrap gap-2">
-              {(['ALL', 'UNREAD', 'RIDE', 'TRIP', 'SAFETY', 'ACCOUNT'] as const).map((tab) => (
+              {(['ALL', 'UNREAD', 'REQUEST', 'TRIP', 'SAFETY', 'ACCOUNT'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setFilterTab(tab)}
@@ -151,10 +154,10 @@ export default function NotificationsPage() {
                     ? 'All'
                     : tab === 'UNREAD'
                     ? `Unread (${unreadCount})`
-                    : tab === 'RIDE'
-                    ? 'Ride Matches'
+                    : tab === 'REQUEST'
+                    ? 'Requests'
                     : tab === 'TRIP'
-                    ? 'Trips'
+                    ? 'Trips & Rides'
                     : tab === 'SAFETY'
                     ? 'Safety'
                     : 'Account'}
@@ -162,13 +165,13 @@ export default function NotificationsPage() {
               ))}
             </div>
 
-            {/* Search Input */}
+            {/* Search Field */}
             <div className="w-full md:w-64">
               <Input
                 leftIcon={<Search className="w-4 h-4 text-slate-400" />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search rider notifications..."
+                placeholder="Search driver notifications..."
               />
             </div>
           </div>
@@ -177,7 +180,7 @@ export default function NotificationsPage() {
         {/* Notifications List */}
         {filteredNotifications.length === 0 ? (
           <EmptyState
-            title="No rider notifications found"
+            title="No driver notifications found"
             description="You have no notifications matching the selected filter or search query."
           />
         ) : (
@@ -223,7 +226,7 @@ export default function NotificationsPage() {
                   {item.link && (
                     <Link href={item.link}>
                       <Button variant="teal" size="sm" rightIcon={<ChevronRight className="w-3.5 h-3.5" />}>
-                        {item.action_label || 'View Ride'}
+                        {item.action_label || 'View Request'}
                       </Button>
                     </Link>
                   )}

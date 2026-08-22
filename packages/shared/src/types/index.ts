@@ -64,3 +64,25 @@ export interface HealthCheckResponse {
     redis: boolean;
   };
 }
+
+export type NotificationCategory = 'RIDE' | 'TRIP' | 'REQUEST' | 'SAFETY' | 'ACCOUNT' | 'SYSTEM';
+export type NotificationPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'CRITICAL';
+export type NotificationState = 'UNREAD' | 'READ' | 'ACTION_REQUIRED' | 'INFORMATIONAL' | 'SUCCESS' | 'WARNING' | 'CRITICAL';
+
+export interface NotificationPayload {
+  id: string;
+  role: 'RIDER' | 'DRIVER' | 'BOTH';
+  category: NotificationCategory;
+  type: string;
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  state: NotificationState;
+  priority: NotificationPriority;
+  link?: string;
+  related_id?: string;
+  action_label?: string;
+  group_count?: number;
+}
+
