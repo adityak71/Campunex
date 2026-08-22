@@ -36,7 +36,15 @@ export default function LoginPage() {
       if (res.token) {
         localStorage.setItem('campunex_token', res.token);
         showToast('Login successful! Redirecting...', 'success');
-        router.push('/dashboard');
+
+        const role = res.user?.role?.toUpperCase();
+        if (role === 'DRIVER') {
+          router.push('/driver');
+        } else if (role === 'ADMIN') {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
       }
     } catch (err: any) {
       const errMsg = err.message || 'Invalid credentials or connection error';
