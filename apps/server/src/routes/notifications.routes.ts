@@ -7,8 +7,8 @@ const router = Router();
 // GET /api/v1/notifications - Role-isolated notification list for authenticated user
 router.get('/', authenticate, async (req: any, res: Response) => {
   try {
-    const userId = req.user!.id;
-    const requestedRole = (req.query.role as string)?.toUpperCase() || req.user!.role;
+    const userId = req.user?.userId || req.user?.id;
+    const requestedRole = (req.query.role as string)?.toUpperCase() || req.user?.role;
     const categoryFilter = (req.query.category as string)?.toUpperCase();
     const filter = (req.query.filter as string)?.toUpperCase();
     const limit = parseInt(req.query.limit as string) || 50;
@@ -18,7 +18,7 @@ router.get('/', authenticate, async (req: any, res: Response) => {
       SELECT id, role, category, type, title, message, state, priority, link, related_id, action_label, group_count,
              read_at, created_at, (read_at IS NOT NULL) AS read
       FROM notifications
-      WHERE user_id = $1 AND (role = $2 OR role = 'BOTH')
+      WHERE (user_id = $1 OR user_id IS NULL) AND (role = $2 OR role = 'BOTH')
     `;
 
     const values: any[] = [userId, requestedRole];
@@ -41,7 +41,7 @@ router.get('/', authenticate, async (req: any, res: Response) => {
 
     // Unread count calculation
     const unreadRes = await pool.query(
-      `SELECT COUNT(*)::int AS unread_count FROM notifications WHERE user_id = $1 AND (role = $2 OR role = 'BOTH') AND read_at IS NULL`,
+      `SELECT COUNT(*)::int AS unread_count FROM notifications WHERE (user_id = $1 OR user_id IS NULL) AND (role = $2 OR role = 'BOTH') AND read_at IS NULL`,
       [userId, requestedRole]
     );
 
@@ -58,13 +58,13 @@ router.get('/', authenticate, async (req: any, res: Response) => {
 // PATCH /api/v1/notifications/:id/read - Persist read state server-side
 router.patch('/:id/read', authenticate, async (req: any, res: Response) => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.userId || req.user?.id;
     const notificationId = req.params.id;
 
     const result = await pool.query(
       `UPDATE notifications
        SET read_at = NOW(), state = 'READ'
-       WHERE id = $1 AND user_id = $2
+       WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)
        RETURNING id, read_at, state`,
       [notificationId, userId]
     );
@@ -83,13 +83,13 @@ router.patch('/:id/read', authenticate, async (req: any, res: Response) => {
 // PATCH /api/v1/notifications/read-all - Bulk mark all unread notifications as read
 router.patch('/read-all', authenticate, async (req: any, res: Response) => {
   try {
-    const userId = req.user!.id;
-    const requestedRole = (req.query.role as string)?.toUpperCase() || req.user!.role;
+    const userId = req.user?.userId || req.user?.id;
+    const requestedRole = (req.query.role as string)?.toUpperCase() || req.user?.role;
 
     const result = await pool.query(
       `UPDATE notifications
        SET read_at = NOW(), state = 'READ'
-       WHERE user_id = $1 AND (role = $2 OR role = 'BOTH') AND read_at IS NULL
+       WHERE (user_id = $1 OR user_id IS NULL) AND (role = $2 OR role = 'BOTH') AND read_at IS NULL
        RETURNING id`,
       [userId, requestedRole]
     );
@@ -104,11 +104,11 @@ router.patch('/read-all', authenticate, async (req: any, res: Response) => {
 // DELETE /api/v1/notifications/:id - Dismiss notification owned by user
 router.delete('/:id', authenticate, async (req: any, res: Response) => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.userId || req.user?.id;
     const notificationId = req.params.id;
 
     const result = await pool.query(
-      `DELETE FROM notifications WHERE id = $1 AND user_id = $2 RETURNING id`,
+      `DELETE FROM notifications WHERE id = $1 AND (user_id = $2 OR user_id IS NULL) RETURNING id`,
       [notificationId, userId]
     );
 
