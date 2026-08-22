@@ -2,9 +2,13 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { UserCheck, MapPin, Users, Navigation2, CheckCircle2, ArrowRight } from 'lucide-react';
+import Button from '../../components/ui/Button';
+import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
+import { UserCheck, MapPin, Users, Navigation2, ArrowRight } from 'lucide-react';
 
 export default function HowItWorksPage() {
   const steps = [
@@ -18,12 +22,12 @@ export default function HowItWorksPage() {
       step: '02',
       icon: MapPin,
       title: 'Enter Route & Schedule',
-      desc: 'Set your daily pickup landmark and destination. Our real-time address geocoding resolves coordinates into PostGIS geometries.',
+      desc: 'Set your daily pickup landmark and destination. Real-time address geocoding converts addresses to spatial coordinates.',
     },
     {
       step: '03',
       icon: Users,
-      title: '500m PostGIS Route Match',
+      title: '500m Route Match Engine',
       desc: 'Our spatial algorithm evaluates route line overlaps within a 500-meter threshold, ranking drivers by match compatibility.',
     },
     {
@@ -40,9 +44,7 @@ export default function HowItWorksPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-12 flex-1 space-y-12 w-full">
         <div className="text-center space-y-3 max-w-3xl mx-auto">
-          <span className="text-xs font-bold text-teal-600 dark:text-cyan-400 uppercase tracking-widest bg-teal-50 dark:bg-cyan-950/80 px-3 py-1 rounded-full border border-teal-200 dark:border-cyan-800">
-            SIMPLE 4-STEP PROCESS
-          </span>
+          <Badge variant="info">SIMPLE 4-STEP PROCESS</Badge>
           <h1 className="text-4xl font-extrabold text-[#1e3a8a] dark:text-cyan-300 tracking-tight">
             How Campunex Works
           </h1>
@@ -53,10 +55,7 @@ export default function HowItWorksPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {steps.map(({ step, icon: Icon, title, desc }) => (
-            <div
-              key={step}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 shadow-sm hover:shadow-md transition space-y-4"
-            >
+            <Card key={step} hoverable className="p-8 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="w-12 h-12 bg-[#e0f2fe] dark:bg-cyan-950/80 text-[#1e3a8a] dark:text-cyan-400 rounded-2xl flex items-center justify-center">
                   <Icon className="w-6 h-6" />
@@ -67,7 +66,7 @@ export default function HowItWorksPage() {
               </div>
               <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{title}</h2>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{desc}</p>
-            </div>
+            </Card>
           ))}
         </div>
 
@@ -77,11 +76,10 @@ export default function HowItWorksPage() {
             Join thousands of verified university students commuting safely every day.
           </p>
           <div className="pt-2 flex justify-center gap-4">
-            <Link
-              href="/register"
-              className="px-6 py-3 bg-[#14b8a6] hover:bg-[#0d9488] text-white font-bold rounded-xl text-sm shadow-md transition flex items-center gap-1.5"
-            >
-              Get Started Now <ArrowRight className="w-4 h-4" />
+            <Link href="/register">
+              <Button variant="teal" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                Get Started Now
+              </Button>
             </Link>
           </div>
         </div>

@@ -3,6 +3,8 @@
 import React from 'react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
 import { ShieldCheck, Lock, Wifi, UserCheck, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 export default function SafetyPage() {
@@ -24,7 +26,7 @@ export default function SafetyPage() {
     },
     {
       icon: ShieldCheck,
-      title: '500m PostGIS Spatial Boundaries',
+      title: '500m Route Proximity Boundaries',
       desc: 'Matching logic measures exact route overlap distances, ensuring drivers and riders meet within safe thresholds.',
     },
   ];
@@ -35,9 +37,7 @@ export default function SafetyPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-12 flex-1 space-y-12 w-full">
         <div className="text-center space-y-3 max-w-3xl mx-auto">
-          <span className="text-xs font-bold text-teal-600 dark:text-cyan-400 uppercase tracking-widest bg-teal-50 dark:bg-cyan-950/80 px-3 py-1 rounded-full border border-teal-200 dark:border-cyan-800">
-            SAFETY FIRST
-          </span>
+          <Badge variant="warning">SAFETY FIRST</Badge>
           <h1 className="text-4xl font-extrabold text-[#1e3a8a] dark:text-cyan-300 tracking-tight">
             Safety Center & Community Guidelines
           </h1>
@@ -48,20 +48,17 @@ export default function SafetyPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {safetyPillars.map(({ icon: Icon, title, desc }, idx) => (
-            <div
-              key={idx}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 shadow-sm space-y-3"
-            >
+            <Card key={idx} className="p-8 space-y-3">
               <div className="w-12 h-12 bg-teal-50 dark:bg-cyan-950/80 text-teal-600 dark:text-cyan-400 rounded-2xl flex items-center justify-center">
                 <Icon className="w-6 h-6" />
               </div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">{title}</h2>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{desc}</p>
-            </div>
+            </Card>
           ))}
         </div>
 
-        <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 space-y-4">
+        <Card className="p-8 space-y-4 bg-slate-100 dark:bg-slate-900">
           <h2 className="text-lg font-bold text-[#1e3a8a] dark:text-cyan-300 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-500" /> Community Safety Guidelines
           </h2>
@@ -76,7 +73,7 @@ export default function SafetyPage() {
               <CheckCircle2 className="w-4 h-4 text-teal-600" /> Report any suspicious behavior directly through the in-app support center.
             </li>
           </ul>
-        </div>
+        </Card>
       </main>
 
       <Footer />
