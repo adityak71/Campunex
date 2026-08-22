@@ -5,6 +5,7 @@ import {
   processStartOtpVerification,
   initiateCompletionOtp,
   processCompletionOtpVerification,
+  markRiderNoShow,
 } from './trips.service.js';
 import { verifyOtpSchema } from '@campunex/shared';
 
@@ -23,10 +24,29 @@ export async function handleGenerateStartOtp(req: Request, res: Response): Promi
   try {
     const driverId = req.user!.userId;
     const tripId = req.params.id;
-    const { otp } = await initiateStartOtp(driverId, tripId);
-    res.status(200).json({ message: 'Start OTP generated and sent to rider', devOtp: otp });
+    await initiateStartOtp(driverId, tripId);
+    // NOTE: OTP is delivered via WebSocket to the rider's room ONLY.
+    // The driver must ask the rider verbally - never expose OTP in HTTP response.
+    res.status(200).json({ message: 'Start OTP generated and sent to rider via WebSocket' });
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Failed to generate start OTP' });
+  }
+}
+
+export async function handleRiderNoShow(req: Request, res: Response): Promise<void> {
+  try {
+    const driverId = req.user!.userId;
+    const { rideRequestId } = req.body;
+
+    if (!rideRequestId) {
+      res.status(400).json({ error: 'rideRequestId is required' });
+      return;
+    }
+
+    await markRiderNoShow(driverId, rideRequestId);
+    res.status(200).json({ message: 'Rider marked as no-show successfully' });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Failed to mark rider as no-show' });
   }
 }
 
@@ -52,8 +72,9 @@ export async function handleGenerateCompletionOtp(req: Request, res: Response): 
   try {
     const driverId = req.user!.userId;
     const tripId = req.params.id;
-    const { otp } = await initiateCompletionOtp(driverId, tripId);
-    res.status(200).json({ message: 'Completion OTP generated and sent to rider', devOtp: otp });
+    await initiateCompletionOtp(driverId, tripId);
+    // NOTE: OTP is delivered via WebSocket to the rider's room ONLY.
+    res.status(200).json({ message: 'Completion OTP generated and sent to rider via WebSocket' });
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Failed to generate completion OTP' });
   }

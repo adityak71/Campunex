@@ -18,13 +18,12 @@ export default function NotificationCenter() {
   const isDriverRoute = pathname.startsWith('/driver');
   const roleContext = isDriverRoute ? 'DRIVER' : 'RIDER';
 
-  const [notifications, setNotifications] = useState<NotificationPayload[]>(() =>
-    deduplicateNotifications(isDriverRoute ? SEED_DRIVER_NOTIFICATIONS : SEED_RIDER_NOTIFICATIONS)
-  );
+  const [notifications, setNotifications] = useState<NotificationPayload[]>([]);
+  const [notificationsLoaded, setNotificationsLoaded] = useState(false);
 
   const { showToast } = useToast();
 
-  // Load persistent notifications from API or fallback
+  // Load persistent notifications from API
   const fetchNotifications = async () => {
     try {
       const res = await apiRequest(`/notifications?role=${roleContext}`);
@@ -32,10 +31,12 @@ export default function NotificationCenter() {
         setNotifications(deduplicateNotifications(res.notifications));
       }
     } catch (err) {
-      // Fallback to seed state if dev API is unseeded
-      setNotifications((prev) =>
-        deduplicateNotifications(prev.length > 0 ? prev : isDriverRoute ? SEED_DRIVER_NOTIFICATIONS : SEED_RIDER_NOTIFICATIONS)
-      );
+      // API unavailable - leave empty rather than showing stale seed data
+      if (!notificationsLoaded) {
+        setNotifications([]);
+      }
+    } finally {
+      setNotificationsLoaded(true);
     }
   };
 

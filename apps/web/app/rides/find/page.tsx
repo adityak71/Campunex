@@ -112,7 +112,13 @@ function FindRideContent() {
 
   const handleConfirmRideRequest = async () => {
     if (!selectedRideForRequest) return;
-    const rideId = selectedRideForRequest.ride_id;
+    // match object has { ride: {...}, driver_name, matchScore, ... }
+    // ride.id is the correct ride UUID
+    const rideId = selectedRideForRequest?.ride?.id || selectedRideForRequest?.id;
+    if (!rideId) {
+      showToast('Invalid ride selected. Please try again.', 'error');
+      return;
+    }
     setRequestSubmitting(true);
 
     try {
@@ -487,8 +493,6 @@ function FindRideContent() {
               destination={selectedPointDest}
               riderPickup={selectedPointOrigin}
               riderDestination={selectedPointDest}
-              matchScore={92}
-              pickupDistanceMeters={320}
               height="500px"
             />
           </div>
@@ -501,7 +505,11 @@ function FindRideContent() {
         onClose={() => setSelectedRideForRequest(null)}
         title="Confirm Ride Seat Request"
       >
-        {selectedRideForRequest && (
+        {selectedRideForRequest && (() => {
+          const rideObj = selectedRideForRequest?.ride || selectedRideForRequest;
+          const score = selectedRideForRequest?.matchScore ?? selectedRideForRequest?.match_score ?? '--';
+          const pdist = selectedRideForRequest?.pickupDistanceMeters ?? '--';
+          return (
           <div className="space-y-4 text-xs">
             <p className="text-slate-600 dark:text-slate-400">
               Submit a seat reservation request to driver <strong>{selectedRideForRequest.driver_name}</strong> for this route?
@@ -509,9 +517,9 @@ function FindRideContent() {
 
             <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2">
               <div>Driver: <strong>{selectedRideForRequest.driver_name}</strong> (.edu Verified)</div>
-              <div>Route: <strong>{selectedRideForRequest.origin_name} ➔ {selectedRideForRequest.destination_name}</strong></div>
-              <div>Departure: <strong>{new Date(selectedRideForRequest.departure_time).toLocaleString()}</strong></div>
-              <div>Proximity: <strong>320m Pickup Distance • 92% Route Match</strong></div>
+              <div>Route: <strong>{rideObj.origin_name} ➔ {rideObj.destination_name}</strong></div>
+              <div>Departure: <strong>{formatDepartureTime(rideObj.departure_time)}</strong></div>
+              <div>Match Score: <strong>{score}% Route Match • {pdist}m Pickup Distance</strong></div>
             </div>
 
             <div className="flex gap-3 pt-2">
@@ -534,7 +542,8 @@ function FindRideContent() {
               </Button>
             </div>
           </div>
-        )}
+          );
+        })()}
       </Modal>
 
       {/* RIDE AVAILABILITY ALERT CREATION MODAL */}

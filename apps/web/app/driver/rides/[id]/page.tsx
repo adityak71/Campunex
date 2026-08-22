@@ -14,6 +14,7 @@ import EmptyState from '../../../../components/ui/EmptyState';
 import Modal from '../../../../components/ui/Modal';
 import { useToast } from '../../../../components/ui/Toast';
 import { apiRequest } from '../../../../lib/api';
+import { formatDepartureTime } from '../../../../lib/formatters';
 import {
   Navigation2,
   Clock,
@@ -188,7 +189,7 @@ export default function DriverRideDetailsPage() {
                 </Badge>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Departure: {new Date(ride.departure_time).toLocaleString()}
+                Departure: {formatDepartureTime(ride.departure_time)}
               </p>
             </div>
 
@@ -269,7 +270,7 @@ export default function DriverRideDetailsPage() {
                       </div>
                       <div className="text-xs text-slate-500 dark:text-slate-400">{req.rider_email}</div>
                       <div className="text-[10px] text-slate-400 mt-0.5">
-                        Requested: {new Date(req.created_at).toLocaleString()}
+                        Requested: {formatDepartureTime(req.created_at)}
                       </div>
                     </div>
                   </div>

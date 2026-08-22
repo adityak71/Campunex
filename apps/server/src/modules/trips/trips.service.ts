@@ -1,6 +1,7 @@
 import { pool } from '../../config/db.js';
 import { generateAndStoreTripOtp, verifyTripOtp } from '../otp/otp.service.js';
 import { io } from '../../server.js';
+import { createAndEmitNotification } from '../../utils/notifications.js';
 import { TripStatus } from '@campunex/shared';
 
 export async function getTripById(tripId: string, userId: string): Promise<any> {
@@ -60,7 +61,7 @@ export async function initiateStartOtp(driverId: string, tripId: string): Promis
     throw new Error('Unauthorized: Only the driver can request the start OTP');
   }
 
-  if (!['ACCEPTED', 'OTP_PENDING'].includes(trip.status)) {
+  if (!['ACCEPTED', 'OTP_PENDING', 'STARTED'].includes(trip.status)) {
     throw new Error(`Cannot generate start OTP for trip in ${trip.status} state`);
   }
 
@@ -71,12 +72,16 @@ export async function initiateStartOtp(driverId: string, tripId: string): Promis
     [hash, tripId]
   );
 
-  // Broadcast OTP event to WebSocket trip room
-  io.to(`trip:${tripId}`).emit('trip:otp_generated', {
-    tripId,
-    type: 'START',
-    otp,
-  });
+  // Broadcast OTP event ONLY to rider's personal room (not driver)
+  const riderIdForOtp = await pool.query('SELECT rider_id FROM trips WHERE id = $1;', [tripId]);
+  const riderId = riderIdForOtp.rows[0]?.rider_id;
+  if (riderId) {
+    io.to(`user:${riderId}`).emit('trip:otp_generated', {
+      tripId,
+      type: 'START',
+      otp,
+    });
+  }
 
   io.to(`trip:${tripId}`).emit('trip:status_change', {
     tripId,
@@ -113,7 +118,25 @@ export async function processStartOtpVerification(
     [updatedStatus, tripId]
   );
 
-  // Broadcast status update to room
+  // Fetch rider_id to notify them
+  const riderRes = await pool.query('SELECT rider_id FROM trips WHERE id = $1;', [tripId]);
+  const riderId = riderRes.rows[0]?.rider_id;
+  if (riderId) {
+    await createAndEmitNotification({
+      userId: riderId,
+      role: 'RIDER',
+      category: 'TRIP',
+      type: 'TRIP_STARTED',
+      title: 'Trip Has Started!',
+      message: 'Your driver has verified your OTP. The trip is now in progress.',
+      state: 'SUCCESS',
+      priority: 'HIGH',
+      link: `/trip/${tripId}`,
+      action_label: 'Track Trip',
+    });
+  }
+
+  // Broadcast status update to trip room
   io.to(`trip:${tripId}`).emit('trip:status_change', {
     tripId,
     status: updatedStatus,
@@ -151,11 +174,16 @@ export async function initiateCompletionOtp(
     [hash, tripId]
   );
 
-  io.to(`trip:${tripId}`).emit('trip:otp_generated', {
-    tripId,
-    type: 'COMPLETION',
-    otp,
-  });
+  // Broadcast OTP event ONLY to rider's personal room (not driver)
+  const riderIdForCompOtp = await pool.query('SELECT rider_id FROM trips WHERE id = $1;', [tripId]);
+  const riderIdComp = riderIdForCompOtp.rows[0]?.rider_id;
+  if (riderIdComp) {
+    io.to(`user:${riderIdComp}`).emit('trip:otp_generated', {
+      tripId,
+      type: 'COMPLETION',
+      otp,
+    });
+  }
 
   io.to(`trip:${tripId}`).emit('trip:status_change', {
     tripId,
@@ -192,6 +220,38 @@ export async function processCompletionOtpVerification(
     [updatedStatus, tripId]
   );
 
+  // Fetch rider_id to notify both parties of trip completion
+  const riderForCompletion = await pool.query('SELECT rider_id FROM trips WHERE id = $1;', [tripId]);
+  const riderIdComp = riderForCompletion.rows[0]?.rider_id;
+  const completionLink = `/trip/${tripId}`;
+
+  if (riderIdComp) {
+    await createAndEmitNotification({
+      userId: riderIdComp,
+      role: 'RIDER',
+      category: 'TRIP',
+      type: 'TRIP_COMPLETED',
+      title: 'Trip Completed!',
+      message: 'Your campus commute has been completed successfully. Thank you for using Campunex!',
+      state: 'SUCCESS',
+      priority: 'NORMAL',
+      link: completionLink,
+      action_label: 'View Trip',
+    });
+  }
+  await createAndEmitNotification({
+    userId: driverId,
+    role: 'DRIVER',
+    category: 'TRIP',
+    type: 'TRIP_COMPLETED',
+    title: 'Trip Completed!',
+    message: 'All completion OTPs verified. Trip logged in Campunex history.',
+    state: 'SUCCESS',
+    priority: 'NORMAL',
+    link: '/driver/history',
+    action_label: 'View History',
+  });
+
   io.to(`trip:${tripId}`).emit('trip:status_change', {
     tripId,
     status: updatedStatus,
@@ -223,4 +283,50 @@ export async function getUserTripHistory(userId: string): Promise<any[]> {
   `;
   const res = await pool.query(query, [userId]);
   return res.rows;
+}
+
+export async function markRiderNoShow(driverId: string, rideRequestId: string): Promise<void> {
+  // Verify the trip and driver
+  const tripRes = await pool.query(
+    'SELECT id, ride_id, status FROM trips WHERE ride_request_id = $1 AND driver_id = $2;',
+    [rideRequestId, driverId]
+  );
+
+  if (tripRes.rows.length === 0) {
+    throw new Error('Trip not found or unauthorized');
+  }
+
+  const trip = tripRes.rows[0];
+  if (['COMPLETED', 'CANCELLED'].includes(trip.status)) {
+    throw new Error(`Cannot mark no-show for a trip in ${trip.status} state`);
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Update trip to CANCELLED
+    await client.query('UPDATE trips SET status = $1, updated_at = NOW() WHERE id = $2;', [
+      'CANCELLED',
+      trip.id,
+    ]);
+
+    // Update ride_request to CANCELLED
+    await client.query('UPDATE ride_requests SET status = $1, updated_at = NOW() WHERE id = $2;', [
+      'CANCELLED',
+      rideRequestId,
+    ]);
+
+    // Restore the seat in rides
+    await client.query('UPDATE rides SET available_seats = available_seats + 1 WHERE id = $1;', [
+      trip.ride_id,
+    ]);
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }

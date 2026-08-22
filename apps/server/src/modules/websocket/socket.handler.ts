@@ -32,7 +32,11 @@ export function initializeWebSocketHandlers(io: Server): void {
     const user: JwtPayload = socket.data.user;
     console.log(`⚡ [WebSocket] User connected: ${user.email} (${user.role}) | Socket ID: ${socket.id}`);
 
-    // 1. Join Trip Room
+    // Auto-join personal user room for targeted events (e.g., OTP delivery to rider only)
+    const personalRoom = `user:${user.userId}`;
+    socket.join(personalRoom);
+    console.log(`🔐 [WebSocket] ${user.email} joined personal room ${personalRoom}`);
+
     socket.on('trip:join', async (data: { tripId: string }) => {
       try {
         const { tripId } = data;

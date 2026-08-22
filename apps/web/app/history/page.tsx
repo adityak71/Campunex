@@ -11,6 +11,7 @@ import Input from '../../components/ui/Input';
 import Skeleton from '../../components/ui/Skeleton';
 import EmptyState from '../../components/ui/EmptyState';
 import { apiRequest } from '../../lib/api';
+import { formatDepartureTime } from '../../lib/formatters';
 import { Navigation2, Calendar, Clock, CheckCircle2, ChevronRight, History, Search, Car } from 'lucide-react';
 
 export default function HistoryPage() {
@@ -134,7 +135,7 @@ export default function HistoryPage() {
                       {trip.status}
                     </Badge>
                     <span className="text-[10px] text-slate-400 font-mono">
-                      {new Date(trip.created_at).toLocaleDateString()}
+                      {formatDepartureTime(trip.created_at)}
                     </span>
                   </div>
 
@@ -150,7 +151,7 @@ export default function HistoryPage() {
                     <div>Rider: <strong>{trip.rider_name}</strong></div>
                     {trip.completed_at && (
                       <div className="text-[10px] text-teal-700 dark:text-teal-400 font-semibold mt-1">
-                        ✓ Completed: {new Date(trip.completed_at).toLocaleString()}
+                        ✓ Completed: {formatDepartureTime(trip.completed_at)}
                       </div>
                     )}
                   </div>

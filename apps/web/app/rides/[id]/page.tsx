@@ -15,6 +15,7 @@ import Map from '../../../components/Map';
 import MatchBar from '../../../components/MatchBar';
 import { useToast } from '../../../components/ui/Toast';
 import { apiRequest } from '../../../lib/api';
+import { formatDepartureTime } from '../../../lib/formatters';
 import {
   Navigation2,
   User as UserIcon,
@@ -225,7 +226,7 @@ export default function RideDetailsPage() {
                 </Badge>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Departure: {new Date(ride.departure_time).toLocaleString()}
+                Departure: {formatDepartureTime(ride.departure_time)}
               </p>
             </div>
 
@@ -267,10 +268,6 @@ export default function RideDetailsPage() {
           <Map
             origin={originPoint}
             destination={destPoint}
-            riderPickup={originPoint}
-            riderDestination={destPoint}
-            matchScore={92}
-            pickupDistanceMeters={320}
             routeGeometryGeoJson={ride.route_geometry}
             height="360px"
           />
@@ -313,20 +310,6 @@ export default function RideDetailsPage() {
             </div>
           </Card>
 
-          {/* Route Compatibility Metrics Card */}
-          <Card className="space-y-4 p-6">
-            <h3 className="text-xs font-extrabold text-[#1e3a8a] dark:text-cyan-300 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800 pb-2 flex items-center gap-1.5">
-              <Navigation2 className="w-4 h-4 text-teal-500" /> PostGIS Spatial Match Metrics
-            </h3>
-
-            <MatchBar matchScore={92} />
-
-            <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-              <div>Route Match: <strong className="text-teal-600 dark:text-teal-400">92% Overlap</strong></div>
-              <div>Pickup Proximity: <strong className="text-teal-600 dark:text-teal-400">320m Distance</strong></div>
-              <div>Security Shield: <strong>Dual 4-Digit OTP</strong></div>
-              <div>Live Streaming: <strong>Active on Socket.IO</strong></div>
-            </div>
           </Card>
         </div>
 
@@ -346,7 +329,7 @@ export default function RideDetailsPage() {
               <div>Vehicle: <strong>Honda Civic (PB-08-AB-1234)</strong></div>
               <div>Pickup Landmark: <strong>{ride.origin_name}</strong></div>
               <div>Destination Landmark: <strong>{ride.destination_name}</strong></div>
-              <div>Departure: <strong>{new Date(ride.departure_time).toLocaleString()}</strong></div>
+              <div>Departure: <strong>{formatDepartureTime(ride.departure_time)}</strong></div>
             </div>
 
             <div className="flex gap-3 pt-2">

@@ -14,6 +14,8 @@ import Modal from '../../../components/ui/Modal';
 import Map from '../../../components/Map';
 import { useToast } from '../../../components/ui/Toast';
 import { apiRequest } from '../../../lib/api';
+import { getMappedStatus } from '../../../lib/status';
+import { formatDepartureTime } from '../../../lib/formatters';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -244,10 +246,10 @@ function DriverRequestsContent() {
                   </div>
                 </div>
 
-                {/* Compatibility Metrics */}
+                {/* Request Metadata */}
                 <div className="grid grid-cols-2 gap-2 text-[11px] bg-[#e0f2fe]/40 dark:bg-cyan-950/30 p-2.5 rounded-xl border border-[#bae6fd] dark:border-cyan-900">
-                  <div>Route Match: <strong className="text-teal-600 dark:text-teal-400">92% Overlap</strong></div>
-                  <div>Pickup Distance: <strong className="text-teal-600 dark:text-teal-400">320m Proximity</strong></div>
+                  <div>Seats Available: <strong className="text-teal-600 dark:text-teal-400">{req.available_seats ?? '--'}</strong></div>
+                  <div>Request Time: <strong className="text-teal-600 dark:text-teal-400">{formatDepartureTime(req.created_at)}</strong></div>
                 </div>
 
                 {/* Requested Timestamp & Action Buttons */}
@@ -256,7 +258,7 @@ function DriverRequestsContent() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span className="text-[10px] text-slate-400 font-mono">
-                    Requested: {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    Requested: {formatDepartureTime(req.created_at)}
                   </span>
 
                   <div className="flex items-center gap-2">
@@ -352,23 +354,19 @@ function DriverRequestsContent() {
             </div>
 
             <div className="space-y-2">
-              <label className="font-bold text-slate-700 dark:text-slate-300">Route Matching Inspection Map</label>
+              <label className="font-bold text-slate-700 dark:text-slate-300">Rider Route Map</label>
               <Map
                 origin={{ latitude: parseFloat(detailModalRequest.origin_lat || '31.2536'), longitude: parseFloat(detailModalRequest.origin_lng || '75.7037') }}
                 destination={{ latitude: parseFloat(detailModalRequest.dest_lat || '31.3260'), longitude: parseFloat(detailModalRequest.dest_lng || '75.5762') }}
-                riderPickup={{ latitude: parseFloat(detailModalRequest.origin_lat || '31.2536') + 0.002, longitude: parseFloat(detailModalRequest.origin_lng || '75.7037') + 0.002 }}
-                riderDestination={{ latitude: parseFloat(detailModalRequest.dest_lat || '31.3260') - 0.002, longitude: parseFloat(detailModalRequest.dest_lng || '75.5762') - 0.002 }}
-                matchScore={92}
-                pickupDistanceMeters={320}
                 height="260px"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl">
-              <div>Route Compatibility: <strong>92% Overlap</strong></div>
-              <div>Pickup Distance: <strong>320m Proximity</strong></div>
               <div>Status: <strong>{getMappedStatus(detailModalRequest.status)}</strong></div>
-              <div>Timestamp: <strong>{new Date(detailModalRequest.created_at).toLocaleString()}</strong></div>
+              <div>Seats on Ride: <strong>{detailModalRequest.available_seats ?? '--'} remaining</strong></div>
+              <div>Requested: <strong>{formatDepartureTime(detailModalRequest.created_at)}</strong></div>
+              <div>Departure: <strong>{formatDepartureTime(detailModalRequest.departure_time)}</strong></div>
             </div>
 
             <Button

@@ -45,7 +45,6 @@ import {
 
 const TRIP_STEPS: TripStatus[] = [
   'ACCEPTED',
-  'OTP_PENDING',
   'STARTED',
   'IN_PROGRESS',
   'COMPLETION_PENDING',
@@ -79,12 +78,13 @@ export default function TripLivePage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  
+  // No-Show Modal State
+  const [showNoShowModal, setShowNoShowModal] = useState(false);
+  const [riderForNoShow, setRiderForNoShow] = useState<string | null>(null);
 
-  // Accepted Riders List for Driver View
-  const [acceptedRiders, setAcceptedRiders] = useState<AcceptedRider[]>([
-    { id: 'r1', name: 'Aditya Kumar', seatNumber: 1, verified: true, otpVerified: false, pickupName: 'LPU Main Gate', status: 'PENDING', otpInput: '' },
-    { id: 'r2', name: 'Aman Kumar', seatNumber: 2, verified: true, otpVerified: false, pickupName: 'Law Gate', status: 'PENDING', otpInput: '' },
-  ]);
+  // Accepted Riders List for Driver View - fetched from backend
+  const [acceptedRiders, setAcceptedRiders] = useState<AcceptedRider[]>([]);
 
   const socketRef = useRef<any>(null);
   const { showToast } = useToast();
@@ -99,20 +99,34 @@ export default function TripLivePage() {
         setCurrentUser(meRes.user);
 
         const tripRes = await apiRequest(`/trips/${tripId}`);
-        setTrip(tripRes.trip);
-        setTripStatus(tripRes.trip.status);
+        const tripData = tripRes.trip;
+        setTrip(tripData);
+        setTripStatus(tripData.status);
 
-        if (tripRes.trip?.start_otp) setStartOtpCode(tripRes.trip.start_otp);
+        // Fetch accepted riders for driver view
+        if (meRes.user?.role === 'DRIVER' && tripData?.ride_id) {
+          try {
+            const reqRes = await apiRequest(`/rides/${tripData.ride_id}/requests`);
+            const accepted = (reqRes.requests || []).filter((r: any) => r.status === 'ACCEPTED');
+            setAcceptedRiders(
+              accepted.map((r: any, idx: number) => ({
+                id: r.id,
+                name: r.rider_name || 'Rider',
+                seatNumber: idx + 1,
+                verified: true,
+                otpVerified: false,
+                pickupName: r.origin_lat ? `${r.origin_lat}, ${r.origin_lng}` : 'Pickup Point',
+                status: 'PENDING' as const,
+                otpInput: '',
+              }))
+            );
+          } catch {
+            // Non-critical: leave empty
+          }
+        }
       } catch (err: any) {
-        setTrip({
-          id: tripId,
-          origin_name: 'LPU Main Gate',
-          destination_name: 'Jalandhar Railway Station',
-          driver_name: 'Rahul Kumar',
-          vehicle: 'Honda Civic (Silver PB-08-AB-1234)',
-          status: 'ACCEPTED',
-          departure_time: new Date().toISOString(),
-        });
+        // Trip fetch failed - show minimal fallback
+        setTrip(null);
       } finally {
         setLoading(false);
       }
@@ -153,35 +167,68 @@ export default function TripLivePage() {
       }
     });
 
+    socket.on('trip:otp_generated', (data: { tripId: string; type: string; otp: string }) => {
+      if (data.tripId === tripId) {
+        if (data.type === 'START') {
+          setStartOtpCode(data.otp);
+          showToast('Driver has arrived! Provide this OTP to start the trip.', 'info');
+        } else if (data.type === 'COMPLETION') {
+          setStartOtpCode(data.otp); // Reuse the same UI element for completion OTP
+          showToast('You have reached! Provide this OTP to complete the trip.', 'info');
+        }
+      }
+    });
+
     return () => {
       socket.emit('trip:leave', { tripId });
       socket.disconnect();
     };
   }, [tripId, router, showToast]);
 
-  // Per-Rider OTP verification by Driver
-  const handleVerifyRiderOtp = (riderId: string) => {
+  // Per-Rider OTP verification by Driver - calls real backend API
+  const handleVerifyRiderOtp = async (riderId: string) => {
     const targetRider = acceptedRiders.find((r) => r.id === riderId);
-    if (!targetRider || !targetRider.otpInput) {
+    if (!targetRider || !targetRider.otpInput?.trim()) {
       showToast('Please enter the 4-digit OTP provided by passenger', 'error');
       return;
     }
 
-    if (targetRider.otpInput.trim() === '1234' || targetRider.otpInput.trim().length === 4) {
+    try {
+      await apiRequest(`/trips/${tripId}/verify-start-otp`, {
+        method: 'POST',
+        body: JSON.stringify({ otp: targetRider.otpInput.trim() }),
+      });
       setAcceptedRiders((prev) =>
         prev.map((r) => (r.id === riderId ? { ...r, otpVerified: true, status: 'VERIFIED' } : r))
       );
       showToast(`✅ ${targetRider.name}'s seat verified! OTP accepted.`, 'success');
-    } else {
-      showToast('Incorrect OTP. Please ask the rider to provide the correct OTP.', 'error');
+    } catch (err: any) {
+      showToast(`OTP verification failed: ${err.message}`, 'error');
     }
   };
 
   const handleRiderNoShow = (riderId: string) => {
-    setAcceptedRiders((prev) =>
-      prev.map((r) => (r.id === riderId ? { ...r, status: 'NO_SHOW' } : r))
-    );
-    showToast('Passenger marked as No-Show. Seat released in inventory.', 'info');
+    setRiderForNoShow(riderId);
+    setShowNoShowModal(true);
+  };
+
+  const confirmNoShow = async () => {
+    if (!riderForNoShow) return;
+    try {
+      await apiRequest(`/trips/${tripId}/no-show`, {
+        method: 'POST',
+        body: JSON.stringify({ rideRequestId: riderForNoShow }),
+      });
+      setAcceptedRiders((prev) =>
+        prev.map((r) => (r.id === riderForNoShow ? { ...r, status: 'NO_SHOW' } : r))
+      );
+      showToast('Passenger marked as No-Show. Seat released in inventory.', 'info');
+    } catch (err: any) {
+      showToast(`Failed to mark No-Show: ${err.message}`, 'error');
+    } finally {
+      setShowNoShowModal(false);
+      setRiderForNoShow(null);
+    }
   };
 
   const copyShareableLink = () => {
@@ -191,13 +238,30 @@ export default function TripLivePage() {
     setTimeout(() => setCopiedLink(false), 3000);
   };
 
-  if (loading || !trip) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans">
         <Navbar />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-6 w-full">
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-[450px] w-full" />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!trip) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans">
+        <Navbar />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 flex flex-col items-center justify-center gap-4">
+          <div className="text-center space-y-3 p-8 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow">
+            <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
+            <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-100">Trip Not Found</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">This trip may have been cancelled or you may not have access to it.</p>
+            <Button variant="outline" size="sm" onClick={() => router.back()}>Go Back</Button>
+          </div>
         </main>
         <Footer />
       </div>
@@ -387,8 +451,8 @@ export default function TripLivePage() {
               </Card>
             )}
 
-            {/* Rider View OTP Display (Only before trip starts) */}
-            {!isDriver && !isCompleted && (tripStatus === 'ACCEPTED' || tripStatus === 'OTP_PENDING') && startOtpCode && (
+            {/* Rider View OTP Display */}
+            {!isDriver && !isCompleted && (tripStatus === 'ACCEPTED' || tripStatus === 'STARTED' || tripStatus === 'COMPLETION_PENDING') && startOtpCode && (
               <Card className="p-6 space-y-3 bg-teal-50/60 dark:bg-cyan-950/40 border-2 border-teal-300 dark:border-cyan-800 text-center">
                 <div className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Your 4-Digit Initiation OTP</div>
                 <div className="font-mono text-4xl font-extrabold text-teal-700 dark:text-cyan-300 tracking-widest">
@@ -489,6 +553,24 @@ export default function TripLivePage() {
           <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-xl text-rose-700 dark:text-rose-300 font-bold flex items-center justify-between">
             <span>🚨 Campus Emergency SOS: +91 1800-102-4431</span>
             <Button variant="danger" size="sm">Call</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* No-Show Confirmation Modal */}
+      <Modal isOpen={showNoShowModal} onClose={() => setShowNoShowModal(false)} title="Confirm No-Show">
+        <div className="space-y-4 text-xs">
+          <p className="text-slate-600 dark:text-slate-400">
+            Are you sure you want to mark this passenger as a No-Show? 
+            This will permanently cancel their seat request and release the inventory back to the system.
+          </p>
+          <div className="flex items-center gap-2 pt-2">
+            <Button variant="danger" className="w-full" onClick={confirmNoShow}>
+              Confirm No-Show
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => setShowNoShowModal(false)}>
+              Cancel
+            </Button>
           </div>
         </div>
       </Modal>

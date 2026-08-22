@@ -51,7 +51,7 @@ export async function runMigrations(): Promise<void> {
         departure_time TIMESTAMPTZ NOT NULL,
         total_seats INT NOT NULL DEFAULT 4,
         available_seats INT NOT NULL DEFAULT 4,
-        status VARCHAR(20) DEFAULT 'SCHEDULED' CHECK (status IN ('SCHEDULED', 'ACTIVE', 'CANCELLED', 'COMPLETED')),
+        status VARCHAR(20) DEFAULT 'SCHEDULED' CHECK (status IN ('SCHEDULED', 'OPEN', 'ACTIVE', 'CANCELLED', 'COMPLETED', 'EXPIRED')),
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
@@ -125,7 +125,7 @@ export async function runMigrations(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS notifications (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
         role VARCHAR(20) NOT NULL CHECK (role IN ('RIDER', 'DRIVER', 'BOTH')),
         category VARCHAR(20) NOT NULL CHECK (category IN ('RIDE', 'TRIP', 'REQUEST', 'SAFETY', 'ACCOUNT', 'SYSTEM')),
         type VARCHAR(50) NOT NULL,
@@ -143,6 +143,18 @@ export async function runMigrations(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
       CREATE INDEX IF NOT EXISTS idx_notifications_user_role ON notifications(user_id, role);
     `);
+
+    // Fix existing rides status CHECK constraint (DROP + ADD to include OPEN, EXPIRED)
+    await client.query(`
+      ALTER TABLE rides DROP CONSTRAINT IF EXISTS rides_status_check;
+      ALTER TABLE rides ADD CONSTRAINT rides_status_check
+        CHECK (status IN ('SCHEDULED', 'OPEN', 'ACTIVE', 'CANCELLED', 'COMPLETED', 'EXPIRED'));
+    `);
+
+    // Fix notifications user_id to be nullable for broadcast system notifications
+    await client.query(`
+      ALTER TABLE notifications ALTER COLUMN user_id DROP NOT NULL;
+    `).catch(() => { /* already nullable - ignore */ });
 
     await client.query('COMMIT');
     console.log('✅ Database migrations applied successfully!');

@@ -8,6 +8,7 @@ import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import { useToast } from '../../components/ui/Toast';
 import { Mail, Send, CheckCircle2, User } from 'lucide-react';
+import { apiRequest } from '../../lib/api';
 
 export default function ContactPage() {
   const [name, setName] = useState('');
@@ -17,10 +18,19 @@ export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const { showToast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    showToast('Support message submitted successfully!', 'success');
+    try {
+      const response = await apiRequest('/support/contact', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, issueType, message }),
+      });
+
+      setSubmitted(true);
+      showToast('Support message submitted successfully!', 'success');
+    } catch (error) {
+      showToast('Error submitting support request', 'error');
+    }
   };
 
   return (

@@ -15,11 +15,9 @@ export async function handleRegister(req: Request, res: Response): Promise<void>
     setTokenCookie(res, token);
 
     res.status(201).json({
-      message: 'Registration successful',
+      message: 'Registration successful. Please check your email for the verification OTP.',
       user,
       token,
-      // Included in development for identity testing
-      devVerificationOtp: verificationOtp,
     });
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Registration failed' });

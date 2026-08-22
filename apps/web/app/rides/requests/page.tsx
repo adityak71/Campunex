@@ -149,7 +149,7 @@ export default function RiderRequestsPage() {
                     </span>
 
                     {isAccepted && (
-                      <Link href={`/trip/${req.ride_id}`}>
+                      <Link href={req.trip_id ? `/trip/${req.trip_id}` : `/rides/requests`}>
                         <Button variant="teal" size="sm" rightIcon={<ChevronRight className="w-3.5 h-3.5" />}>
                           Open Live Trip Room
                         </Button>

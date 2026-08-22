@@ -6,6 +6,7 @@ import {
   handleGenerateCompletionOtp,
   handleVerifyCompletionOtp,
   handleGetTripHistory,
+  handleRiderNoShow,
 } from '../modules/trips/trips.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireRole } from '../middleware/rbac.js';
@@ -18,6 +19,8 @@ router.get('/:id', authenticate, handleGetTrip);
 // Driver Dual OTP Endpoints
 router.post('/:id/start-otp', authenticate, requireRole('DRIVER'), handleGenerateStartOtp);
 router.post('/:id/verify-start-otp', authenticate, requireRole('DRIVER'), handleVerifyStartOtp);
+
+router.post('/:id/no-show', authenticate, requireRole('DRIVER'), handleRiderNoShow);
 router.post('/:id/completion-otp', authenticate, requireRole('DRIVER'), handleGenerateCompletionOtp);
 router.post('/:id/verify-completion-otp', authenticate, requireRole('DRIVER'), handleVerifyCompletionOtp);
 

@@ -35,6 +35,7 @@ import {
   History,
   UserCheck
 } from 'lucide-react';
+import { formatDepartureTime } from '../../lib/formatters';
 
 export default function DriverDashboardPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -308,7 +309,7 @@ export default function DriverDashboardPage() {
                         </div>
                         <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
                           <Clock className="w-3.5 h-3.5 text-slate-400" />
-                          <span>Departure: {new Date(ride.departure_time).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                          <span>Departure: {formatDepartureTime(ride.departure_time)}</span>
                         </div>
                       </div>
 

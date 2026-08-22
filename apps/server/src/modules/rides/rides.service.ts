@@ -1,5 +1,6 @@
 import { pool } from '../../config/db.js';
 import { pointToWkt, lineStringToWkt } from '../../utils/postgis.js';
+import { createAndEmitNotification } from '../../utils/notifications.js';
 import { GeoPoint, Ride } from '@campunex/shared';
 
 export async function createRide(data: {
@@ -84,7 +85,7 @@ export async function createRide(data: {
   ]);
 
   const row = res.rows[0];
-  return {
+  const ride = {
     id: row.id,
     driver_id: row.driver_id,
     origin_name: row.origin_name,
@@ -99,6 +100,22 @@ export async function createRide(data: {
     created_at: new Date(row.created_at).toISOString(),
     updated_at: new Date(row.updated_at).toISOString(),
   };
+
+  // Notify driver their ride was published (DB + WebSocket)
+  await createAndEmitNotification({
+    userId: driverId,
+    role: 'DRIVER',
+    category: 'RIDE',
+    type: 'RIDE_PUBLISHED_SUCCESSFULLY',
+    title: 'Ride Published Successfully',
+    message: `Your route from ${row.origin_name} to ${row.destination_name} is now open for 500m route matching.`,
+    state: 'SUCCESS',
+    priority: 'NORMAL',
+    link: '/driver/rides',
+    action_label: 'View Ride',
+  });
+
+  return ride;
 }
 
 export async function getDriverRides(driverId: string): Promise<Ride[]> {
@@ -205,6 +222,24 @@ export async function requestRide(data: {
     [rideId, riderId, pickupWkt, dropoffWkt]
   );
 
+  // Notify the driver of the new incoming seat request (DB + WebSocket)
+  const rideDriverRes = await pool.query('SELECT driver_id FROM rides WHERE id = $1;', [rideId]);
+  const driverIdForNotif = rideDriverRes.rows[0]?.driver_id;
+  if (driverIdForNotif) {
+    await createAndEmitNotification({
+      userId: driverIdForNotif,
+      role: 'DRIVER',
+      category: 'REQUEST',
+      type: 'NEW_RIDER_REQUEST',
+      title: 'New Ride Seat Request',
+      message: 'A rider has requested a seat on your published route.',
+      state: 'ACTION_REQUIRED',
+      priority: 'HIGH',
+      link: '/driver/requests',
+      action_label: 'Review Request',
+    });
+  }
+
   return insertRes.rows[0];
 }
 
@@ -218,10 +253,13 @@ export async function getRiderRequests(riderId: string): Promise<any[]> {
       r.origin_name,
       r.destination_name,
       r.departure_time,
-      u.name AS driver_name
+      u.name AS driver_name,
+      t.id AS trip_id,
+      t.status AS trip_status
     FROM ride_requests req
     JOIN rides r ON req.ride_id = r.id
     JOIN users u ON r.driver_id = u.id
+    LEFT JOIN trips t ON t.ride_request_id = req.id
     WHERE req.rider_id = $1
     ORDER BY req.created_at DESC;
   `;
@@ -325,12 +363,43 @@ export async function updateRideRequestStatus(data: {
         [requestId, reqInfo.ride_id, reqInfo.rider_id, driverId]
       );
 
+      const tripId = tripRes.rows[0]?.id;
+
+      // Notify rider their request was accepted (DB + WebSocket)
+      await createAndEmitNotification({
+        userId: reqInfo.rider_id,
+        role: 'RIDER',
+        category: 'REQUEST',
+        type: 'REQUEST_ACCEPTED',
+        title: 'Driver Accepted Your Request!',
+        message: 'Your seat booking has been accepted. A live trip tracking room is now active.',
+        state: 'SUCCESS',
+        priority: 'HIGH',
+        link: tripId ? `/trip/${tripId}` : `/rides/requests`,
+        action_label: 'View Trip',
+      });
+
       await client.query('COMMIT');
       return { requestStatus: 'ACCEPTED', trip: tripRes.rows[0] };
     } else {
       await client.query('UPDATE ride_requests SET status = \'REJECTED\' WHERE id = $1;', [
         requestId,
       ]);
+
+      // Notify rider their request was declined (DB + WebSocket)
+      await createAndEmitNotification({
+        userId: reqInfo.rider_id,
+        role: 'RIDER',
+        category: 'REQUEST',
+        type: 'REQUEST_DECLINED',
+        title: 'Driver Declined Your Request',
+        message: 'Your seat request was declined. Explore other compatible rides.',
+        state: 'WARNING',
+        priority: 'NORMAL',
+        link: '/rides/find',
+        action_label: 'Find Rides',
+      });
+
       await client.query('COMMIT');
       return { requestStatus: 'REJECTED' };
     }

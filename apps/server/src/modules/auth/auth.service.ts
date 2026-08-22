@@ -3,6 +3,7 @@ import { redis } from '../../config/redis.js';
 import { hashPassword, verifyPassword } from '../../utils/password.js';
 import { signToken, JwtPayload } from '../../utils/jwt.js';
 import { UserRole, VerificationStatus, User } from '@campunex/shared';
+import { sendVerificationEmail } from '../../utils/mailer.js';
 
 export async function registerUser(data: {
   name: string;
@@ -48,6 +49,10 @@ export async function registerUser(data: {
   // 5. Generate 6-digit institutional OTP & store in Redis (10 minutes)
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   await redis.setex(`inst_otp:${newUser.id}`, 600, otp);
+
+  // Send OTP to user's email via Brevo
+  // Fire and forget (don't block registration on email failure)
+  sendVerificationEmail(newUser.email, otp).catch(console.error);
 
   // 6. Sign JWT Token
   const jwtPayload: JwtPayload = {

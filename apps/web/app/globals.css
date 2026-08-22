@@ -18,3 +18,22 @@ body {
     rgb(var(--background-start-rgb));
   min-height: 100vh;
 }
+
+/* 
+==================================================
+CAMPUNEX GLOBAL Z-INDEX HIERARCHY
+==================================================
+Maps must ALWAYS remain behind modals.
+Leaflet defaults to z-index 400 and 800 which breaks UI overlays.
+We force Leaflet to use our base map z-index.
+*/
+.leaflet-pane {
+  z-index: 10 !important;
+}
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 20 !important;
+}
+.leaflet-control {
+  z-index: 20 !important;
+}

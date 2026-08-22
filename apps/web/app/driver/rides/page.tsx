@@ -11,6 +11,7 @@ import Skeleton from '../../../components/ui/Skeleton';
 import EmptyState from '../../../components/ui/EmptyState';
 import { useToast } from '../../../components/ui/Toast';
 import { apiRequest } from '../../../lib/api';
+import { formatDepartureTime } from '../../../lib/formatters';
 import {
   Car,
   Bike,
@@ -179,7 +180,7 @@ export default function DriverRidesPage() {
                       </div>
                       <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5" />
-                        <span>Departure: {new Date(ride.departure_time).toLocaleString()}</span>
+                        <span>Departure: {formatDepartureTime(ride.departure_time)}</span>
                       </div>
                     </div>
 
@@ -207,7 +208,7 @@ export default function DriverRidesPage() {
 
                   <div className="pt-2 flex justify-between items-center">
                     <span className="text-xs text-slate-400 font-mono text-[10px]">
-                      Created: {new Date(ride.created_at).toLocaleDateString()}
+                      Created: {formatDepartureTime(ride.created_at)}
                     </span>
                     <Link href={`/driver/rides/${ride.id}`}>
                       <Button variant="teal" size="sm" rightIcon={<ChevronRight className="w-4 h-4" />}>

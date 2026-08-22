@@ -15,6 +15,7 @@ import tripsRoutes from './routes/trips.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import devRoutes from './routes/dev.routes.js';
 import notificationsRoutes from './routes/notifications.routes.js';
+import supportRoutes from './routes/support.routes.js';
 import { initializeWebSocketHandlers } from './modules/websocket/socket.handler.js';
 import { HealthCheckResponse } from '@campunex/shared';
 
@@ -49,6 +50,7 @@ app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/rides', ridesRoutes);
 app.use('/api/v1/trips', tripsRoutes);
 app.use('/api/v1/notifications', notificationsRoutes);
+app.use('/api/v1/support', supportRoutes);
 app.use('/api/v1/dev', devRoutes);
 
 // Health Check Endpoint
