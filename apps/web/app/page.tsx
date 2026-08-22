@@ -26,8 +26,37 @@ import {
   HeartHandshake
 } from 'lucide-react';
 
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { apiRequest } from '../lib/api';
+
 export default function HomePage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    async function checkAuthAndRedirect() {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('campunex_token') : null;
+      if (token) {
+        try {
+          const res = await apiRequest('/auth/me');
+          if (res.user) {
+            const role = (res.user.role || 'RIDER').toUpperCase();
+            if (role === 'DRIVER') {
+              router.replace('/driver');
+            } else if (role === 'ADMIN') {
+              router.replace('/admin');
+            } else {
+              router.replace('/dashboard');
+            }
+          }
+        } catch (e) {
+          // Token invalid or expired
+        }
+      }
+    }
+    checkAuthAndRedirect();
+  }, [router]);
 
   const faqs = [
     {

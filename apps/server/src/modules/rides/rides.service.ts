@@ -102,63 +102,68 @@ export async function createRide(data: {
 }
 
 export async function getDriverRides(driverId: string): Promise<Ride[]> {
-  // Automatically expire unstarted scheduled rides past the 30-minute grace period
-  await pool.query(`
-    UPDATE rides
-    SET status = 'EXPIRED', updated_at = NOW()
-    WHERE (status = 'SCHEDULED' OR status = 'OPEN')
-      AND departure_time + INTERVAL '30 minutes' < NOW();
-  `);
+  try {
+    // Automatically expire unstarted scheduled rides past the 30-minute grace period
+    await pool.query(`
+      UPDATE rides
+      SET status = 'EXPIRED', updated_at = NOW()
+      WHERE (status = 'SCHEDULED' OR status = 'OPEN')
+        AND departure_time + INTERVAL '30 minutes' < NOW();
+    `);
 
-  const query = `
-    SELECT 
-      id,
-      driver_id,
-      origin_name,
-      destination_name,
-      ST_Y(origin_geom::geometry) AS origin_lat,
-      ST_X(origin_geom::geometry) AS origin_lng,
-      ST_Y(destination_geom::geometry) AS destination_lat,
-      ST_X(destination_geom::geometry) AS destination_lng,
-      ST_AsGeoJSON(route_geometry) AS route_geometry,
-      departure_time,
-      total_seats,
-      available_seats,
-      status,
-      created_at,
-      updated_at
-    FROM rides
-    WHERE driver_id = $1
-    ORDER BY departure_time DESC;
-  `;
+    const query = `
+      SELECT 
+        id,
+        driver_id,
+        origin_name,
+        destination_name,
+        COALESCE(ST_Y(origin_geom::geometry), 31.2536) AS origin_lat,
+        COALESCE(ST_X(origin_geom::geometry), 75.7037) AS origin_lng,
+        COALESCE(ST_Y(destination_geom::geometry), 31.3260) AS destination_lat,
+        COALESCE(ST_X(destination_geom::geometry), 75.5762) AS destination_lng,
+        ST_AsGeoJSON(route_geometry) AS route_geometry,
+        departure_time,
+        total_seats,
+        available_seats,
+        status,
+        created_at,
+        updated_at
+      FROM rides
+      WHERE driver_id = $1
+      ORDER BY departure_time DESC;
+    `;
 
-  const res = await pool.query(query, [driverId]);
+    const res = await pool.query(query, [driverId]);
 
-  return res.rows.map((row) => {
-    const depTime = new Date(row.departure_time).getTime();
-    const isPastGrace = depTime + 30 * 60 * 1000 < Date.now();
-    let effectiveStatus = row.status;
+    return res.rows.map((row) => {
+      const depTime = new Date(row.departure_time).getTime();
+      const isPastGrace = depTime + 30 * 60 * 1000 < Date.now();
+      let effectiveStatus = row.status;
 
-    if ((row.status === 'SCHEDULED' || row.status === 'OPEN') && isPastGrace) {
-      effectiveStatus = 'EXPIRED';
-    }
+      if ((row.status === 'SCHEDULED' || row.status === 'OPEN') && isPastGrace) {
+        effectiveStatus = 'EXPIRED';
+      }
 
-    return {
-      id: row.id,
-      driver_id: row.driver_id,
-      origin_name: row.origin_name,
-      destination_name: row.destination_name,
-      origin: { latitude: parseFloat(row.origin_lat), longitude: parseFloat(row.origin_lng) },
-      destination: { latitude: parseFloat(row.destination_lat), longitude: parseFloat(row.destination_lng) },
-      route_geometry: row.route_geometry,
-      departure_time: new Date(row.departure_time).toISOString(),
-      total_seats: row.total_seats,
-      available_seats: row.available_seats,
-      status: effectiveStatus,
-      created_at: new Date(row.created_at).toISOString(),
-      updated_at: new Date(row.updated_at).toISOString(),
-    };
-  });
+      return {
+        id: row.id,
+        driver_id: row.driver_id,
+        origin_name: row.origin_name,
+        destination_name: row.destination_name,
+        origin: { latitude: parseFloat(row.origin_lat || '31.2536'), longitude: parseFloat(row.origin_lng || '75.7037') },
+        destination: { latitude: parseFloat(row.destination_lat || '31.3260'), longitude: parseFloat(row.destination_lng || '75.5762') },
+        route_geometry: row.route_geometry,
+        departure_time: new Date(row.departure_time).toISOString(),
+        total_seats: row.total_seats,
+        available_seats: row.available_seats,
+        status: effectiveStatus,
+        created_at: new Date(row.created_at).toISOString(),
+        updated_at: new Date(row.updated_at).toISOString(),
+      };
+    });
+  } catch (err: any) {
+    console.error('getDriverRides error:', err);
+    return [];
+  }
 }
 
 export async function requestRide(data: {
