@@ -225,7 +225,11 @@ export async function getRiderRequests(riderId: string): Promise<any[]> {
 }
 
 export async function getRideRequestsForDriver(driverId: string, rideId: string): Promise<any[]> {
-  const query = `
+  return getAllDriverRideRequests(driverId, rideId);
+}
+
+export async function getAllDriverRideRequests(driverId: string, rideId?: string): Promise<any[]> {
+  let query = `
     SELECT 
       req.id,
       req.ride_id,
@@ -233,14 +237,30 @@ export async function getRideRequestsForDriver(driverId: string, rideId: string)
       req.status,
       req.created_at,
       u.name AS rider_name,
-      u.email AS rider_email
+      u.email AS rider_email,
+      r.origin_name AS ride_origin,
+      r.destination_name AS ride_dest,
+      ST_Y(r.origin_geom::geometry) AS origin_lat,
+      ST_X(r.origin_geom::geometry) AS origin_lng,
+      ST_Y(r.destination_geom::geometry) AS dest_lat,
+      ST_X(r.destination_geom::geometry) AS dest_lng,
+      r.departure_time,
+      r.total_seats,
+      r.available_seats
     FROM ride_requests req
     JOIN rides r ON req.ride_id = r.id
     JOIN users u ON req.rider_id = u.id
-    WHERE r.driver_id = $1 AND req.ride_id = $2
-    ORDER BY req.created_at DESC;
+    WHERE r.driver_id = $1
   `;
-  const res = await pool.query(query, [driverId, rideId]);
+
+  const values: any[] = [driverId];
+  if (rideId) {
+    query += ` AND req.ride_id = $2`;
+    values.push(rideId);
+  }
+
+  query += ` ORDER BY req.created_at DESC;`;
+  const res = await pool.query(query, values);
   return res.rows;
 }
 

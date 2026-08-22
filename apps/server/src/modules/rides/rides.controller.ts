@@ -4,7 +4,7 @@ import {
   getDriverRides,
   requestRide,
   getRiderRequests,
-  getRideRequestsForDriver,
+  getAllDriverRideRequests,
   updateRideRequestStatus,
 } from './rides.service.js';
 import { findMatchingRides } from '../matching/matching.service.js';
@@ -82,12 +82,12 @@ export async function handleGetMyRequests(req: Request, res: Response): Promise<
 
 export async function handleGetDriverRideRequests(req: Request, res: Response): Promise<void> {
   try {
-    const driverId = req.user!.userId;
-    const rideId = req.params.id;
-    const requests = await getRideRequestsForDriver(driverId, rideId);
+    const driverId = req.user!.userId || (req.user as any)?.id;
+    const rideId = req.params.id || (req.query.rideId as string);
+    const requests = await getAllDriverRideRequests(driverId, rideId);
     res.status(200).json({ requests });
   } catch (err: any) {
-    res.status(500).json({ error: 'Failed to fetch ride requests' });
+    res.status(500).json({ error: 'Failed to fetch passenger ride requests' });
   }
 }
 

@@ -30,11 +30,26 @@ export const createRideSchema = z.object({
 export const searchRideSchema = z.object({
   pickup_lat: z.coerce.number().min(-90).max(90),
   pickup_lng: z.coerce.number().min(-180).max(180),
-  dropoff_lat: z.coerce.number().min(-90).max(90),
-  dropoff_lng: z.coerce.number().min(-180).max(180),
+  dropoff_lat: z.coerce.number().min(-90).max(90).optional(),
+  dest_lat: z.coerce.number().min(-90).max(90).optional(),
+  dropoff_lng: z.coerce.number().min(-180).max(180).optional(),
+  dest_lng: z.coerce.number().min(-180).max(180).optional(),
   departure_time: z.string().optional(),
+  date: z.string().optional(),
+  vehicle_type: z.enum(['ANY', 'CAR', 'BIKE']).optional().default('ANY'),
+  vehicle: z.string().optional(),
+  time_window: z.enum(['ANY', 'MORNING', 'AFTERNOON', 'EVENING']).optional().default('ANY'),
   max_distance_meters: z.coerce.number().positive().optional().default(500),
-});
+}).transform((data) => ({
+  pickup_lat: data.pickup_lat,
+  pickup_lng: data.pickup_lng,
+  dropoff_lat: data.dropoff_lat ?? data.dest_lat ?? 31.3260,
+  dropoff_lng: data.dropoff_lng ?? data.dest_lng ?? 75.5762,
+  departure_time: data.departure_time ?? data.date,
+  vehicle_type: data.vehicle_type ?? (data.vehicle as any) ?? 'ANY',
+  time_window: data.time_window ?? 'ANY',
+  max_distance_meters: data.max_distance_meters ?? 500,
+}));
 
 export const verifyOtpSchema = z.object({
   otp: z.string().length(4, 'OTP must be 4 digits').regex(/^\d{4}$/, 'OTP must be numeric'),

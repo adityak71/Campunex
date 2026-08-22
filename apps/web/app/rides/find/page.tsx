@@ -82,16 +82,19 @@ function FindRideContent() {
       const queryParams = new URLSearchParams({
         pickup_lat: originLat,
         pickup_lng: originLng,
+        dropoff_lat: destLat,
+        dropoff_lng: destLng,
         dest_lat: destLat,
         dest_lng: destLng,
+        date: searchDate,
+        vehicle_type: vehicleFilter,
+        time_window: searchTimeWindow,
       });
 
       const res = await apiRequest(`/rides/matches?${queryParams.toString()}`);
       setMatches(res.matches || []);
       if (res.matches && res.matches.length > 0) {
         showToast(`Found ${res.matches.length} compatible open driver ride(s)!`, 'success');
-      } else {
-        showToast('No matching open rides found within 500m threshold.', 'info');
       }
     } catch (err: any) {
       const msg = err.message || 'Failed to fetch compatible rides from PostGIS';

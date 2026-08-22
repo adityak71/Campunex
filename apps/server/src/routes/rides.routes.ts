@@ -19,6 +19,7 @@ router.get('/matches', handleSearchMatches);
 // Driver endpoints
 router.post('/', authenticate, requireRole('DRIVER'), handleCreateRide);
 router.get('/my-rides', authenticate, requireRole('DRIVER'), handleGetMyRides);
+router.get('/driver-requests', authenticate, requireRole('DRIVER'), handleGetDriverRideRequests);
 router.get('/:id/requests', authenticate, requireRole('DRIVER'), handleGetDriverRideRequests);
 
 // Rider endpoints

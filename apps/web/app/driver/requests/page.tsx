@@ -38,7 +38,6 @@ function DriverRequestsContent() {
   const { showToast } = useToast();
 
   const [requests, setRequests] = useState<any[]>([]);
-  const [rides, setRides] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,42 +60,12 @@ function DriverRequestsContent() {
         setLoading(true);
         setError(null);
 
-        // Fetch driver's published rides
-        const ridesRes = await apiRequest('/rides/my-rides');
-        const driverRides = ridesRes.rides || [];
-        setRides(driverRides);
-
-        // Fetch requests for all rides or single rideIdParam
-        let allRequests: any[] = [];
-        const ridesToQuery = rideIdParam
-          ? driverRides.filter((r: any) => r.id === rideIdParam)
-          : driverRides;
-
-        for (const r of ridesToQuery) {
-          try {
-            const reqRes = await apiRequest(`/rides/${r.id}/requests`);
-            if (reqRes.requests) {
-              const reqsWithRide = reqRes.requests.map((reqItem: any) => ({
-                ...reqItem,
-                ride_origin: r.origin_name,
-                ride_dest: r.destination_name,
-                origin_lat: r.origin?.latitude || r.origin_lat || 31.2536,
-                origin_lng: r.origin?.longitude || r.origin_lng || 75.7037,
-                dest_lat: r.destination?.latitude || r.destination_lat || 31.3260,
-                dest_lng: r.destination?.longitude || r.destination_lng || 75.5762,
-              }));
-              allRequests = [...allRequests, ...reqsWithRide];
-            }
-          } catch (e) {
-            // Ignore fetch errors for single ride requests
-          }
-        }
-
-        setRequests(allRequests);
+        const endpoint = `/rides/driver-requests${rideIdParam ? `?rideId=${rideIdParam}` : ''}`;
+        const res = await apiRequest(endpoint);
+        setRequests(res.requests || []);
       } catch (err: any) {
-        const msg = err.message || 'Failed to load passenger ride requests';
+        const msg = err.message || 'Failed to load your published ride requests';
         setError(msg);
-        showToast(msg, 'error');
       } finally {
         setLoading(false);
       }
@@ -149,18 +118,6 @@ function DriverRequestsContent() {
     return status === statusFilter;
   });
 
-  if (loading) {
-    return (
-      <main className="max-w-6xl mx-auto px-4 py-8 flex-1 space-y-6 w-full">
-        <Skeleton className="h-20 w-full" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Skeleton className="h-44 w-full" />
-          <Skeleton className="h-44 w-full" />
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-6 w-full">
       {/* Header Title */}
@@ -182,35 +139,47 @@ function DriverRequestsContent() {
         </Link>
       </div>
 
-      {/* Error Alert */}
+      {/* Error Alert Banner */}
       {error && (
-        <div className="p-4 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-2xl text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
-          <span>{error}</span>
+        <div className="p-4 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-2xl text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
         </div>
       )}
 
       {/* Filter Tabs (All, Pending, Accepted, Declined, Expired, Cancelled) */}
-      <Card className="p-4">
-        <div className="flex flex-wrap gap-2">
-          {(['ALL', 'PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED', 'CANCELLED'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setStatusFilter(tab)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition border ${
-                statusFilter === tab
-                  ? 'bg-teal-50 dark:bg-cyan-950 text-teal-700 dark:text-cyan-300 border-teal-300 dark:border-cyan-800 shadow-sm'
-                  : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-      </Card>
+      {!error && (
+        <Card className="p-4">
+          <div className="flex flex-wrap gap-2">
+            {(['ALL', 'PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED', 'CANCELLED'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setStatusFilter(tab)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition border ${
+                  statusFilter === tab
+                    ? 'bg-teal-50 dark:bg-cyan-950 text-teal-700 dark:text-cyan-300 border-teal-300 dark:border-cyan-800 shadow-sm'
+                    : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
 
-      {/* Request Cards Grid */}
-      {filteredRequests.length === 0 ? (
+      {/* Main Request Grid Hierarchy */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Skeleton className="h-44 w-full" />
+          <Skeleton className="h-44 w-full" />
+        </div>
+      ) : error ? null : filteredRequests.length === 0 ? (
         <EmptyState
           title={`No ${statusFilter.toLowerCase()} requests found`}
           description="Passenger booking requests submitted for your published routes will appear here in real-time."
@@ -284,7 +253,7 @@ function DriverRequestsContent() {
                 {/* Requested Timestamp & Action Buttons */}
                 <div
                   className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800"
-                  onClick={(e) => e.stopPropagation()} // Prevent opening details modal when clicking action buttons
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <span className="text-[10px] text-slate-400 font-mono">
                     Requested: {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -365,7 +334,7 @@ function DriverRequestsContent() {
         </div>
       </Modal>
 
-      {/* DETAILED REQUEST VIEW MODAL (Click Request) */}
+      {/* DETAILED REQUEST VIEW MODAL */}
       <Modal
         isOpen={!!detailModalRequest}
         onClose={() => setDetailModalRequest(null)}
@@ -385,10 +354,10 @@ function DriverRequestsContent() {
             <div className="space-y-2">
               <label className="font-bold text-slate-700 dark:text-slate-300">Route Matching Inspection Map</label>
               <Map
-                origin={{ latitude: parseFloat(detailModalRequest.origin_lat), longitude: parseFloat(detailModalRequest.origin_lng) }}
-                destination={{ latitude: parseFloat(detailModalRequest.dest_lat), longitude: parseFloat(detailModalRequest.dest_lng) }}
-                riderPickup={{ latitude: parseFloat(detailModalRequest.origin_lat) + 0.002, longitude: parseFloat(detailModalRequest.origin_lng) + 0.002 }}
-                riderDestination={{ latitude: parseFloat(detailModalRequest.dest_lat) - 0.002, longitude: parseFloat(detailModalRequest.dest_lng) - 0.002 }}
+                origin={{ latitude: parseFloat(detailModalRequest.origin_lat || '31.2536'), longitude: parseFloat(detailModalRequest.origin_lng || '75.7037') }}
+                destination={{ latitude: parseFloat(detailModalRequest.dest_lat || '31.3260'), longitude: parseFloat(detailModalRequest.dest_lng || '75.5762') }}
+                riderPickup={{ latitude: parseFloat(detailModalRequest.origin_lat || '31.2536') + 0.002, longitude: parseFloat(detailModalRequest.origin_lng || '75.7037') + 0.002 }}
+                riderDestination={{ latitude: parseFloat(detailModalRequest.dest_lat || '31.3260') - 0.002, longitude: parseFloat(detailModalRequest.dest_lng || '75.5762') - 0.002 }}
                 matchScore={92}
                 pickupDistanceMeters={320}
                 height="260px"
