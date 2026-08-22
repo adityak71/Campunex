@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
-import { Search, ChevronDown, HelpCircle, Shield, KeyRound, MapPin } from 'lucide-react';
+import { Search, ChevronDown, HelpCircle, Shield, KeyRound, MapPin, MessageSquare, AlertCircle } from 'lucide-react';
 
 export default function HelpPage() {
   const [search, setSearch] = useState('');
@@ -21,18 +23,22 @@ export default function HelpPage() {
 
   const faqs = [
     {
+      cat: 'Verification',
       q: 'How does university email verification work?',
       a: 'We send a 6-digit OTP code to your official campus email (.edu or .in domain). Once verified, your account receives the Verified campus badge.',
     },
     {
+      cat: 'Ride Problems',
       q: 'Why am I not seeing matching rides?',
       a: 'The engine filters rides where the driver route passes within 500 meters of your pickup landmark. Check your pickup location or adjust departure times.',
     },
     {
+      cat: 'Technical Issues',
       q: 'What should I do if the driver WebSocket disconnects?',
       a: 'The trip remains active and last-known GPS coordinates are retained in Redis. The app automatically reconnects when network restores.',
     },
     {
+      cat: 'Trip Problems',
       q: 'Where do I find my ride initiation OTP code?',
       a: 'When the driver arrives at your pickup point, your live trip screen displays a 4-digit code to share with the driver to start the trip.',
     },
@@ -41,7 +47,8 @@ export default function HelpPage() {
   const filteredFaqs = faqs.filter(
     (f) =>
       f.q.toLowerCase().includes(search.toLowerCase()) ||
-      f.a.toLowerCase().includes(search.toLowerCase())
+      f.a.toLowerCase().includes(search.toLowerCase()) ||
+      f.cat.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -89,7 +96,10 @@ export default function HelpPage() {
                   onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
                   className="w-full px-6 py-4 text-left font-bold text-slate-900 dark:text-slate-100 text-sm flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-800/60 transition"
                 >
-                  <span>{faq.q}</span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default">{faq.cat}</Badge>
+                    <span>{faq.q}</span>
+                  </div>
                   <ChevronDown
                     className={`w-4 h-4 text-slate-400 transition-transform ${
                       openFaq === idx ? 'rotate-180' : ''
@@ -105,6 +115,21 @@ export default function HelpPage() {
             ))}
           </div>
         </div>
+
+        {/* Contact Support CTA Card */}
+        <Card className="p-8 text-center bg-slate-100 dark:bg-slate-900 space-y-3">
+          <h2 className="text-xl font-bold text-[#1e3a8a] dark:text-cyan-300">Still Need Help?</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+            Our campus support team is available to assist with account verification, trip issues, or platform questions.
+          </p>
+          <div className="pt-2 flex justify-center">
+            <Link href="/contact">
+              <Button variant="teal" size="md" leftIcon={<MessageSquare className="w-4 h-4" />}>
+                Contact Support Team
+              </Button>
+            </Link>
+          </div>
+        </Card>
       </main>
 
       <Footer />
