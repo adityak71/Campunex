@@ -160,7 +160,6 @@ export default function Map({
 
           map.fitBounds(routePolylineRef.current.getBounds(), { padding: [40, 40] });
         } catch (e) {
-          // Fallback straight line if GeoJSON parsing fails
           if (origin && destination) {
             routePolylineRef.current = L.polyline(
               [
@@ -226,11 +225,11 @@ export default function Map({
   }, [driverLocation]);
 
   return (
-    <div className="relative rounded-2xl overflow-hidden shadow-md border border-slate-200 dark:border-slate-800">
+    <div className="relative z-10 isolate rounded-2xl overflow-hidden shadow-md border border-slate-200 dark:border-slate-800">
       <div ref={mapRef} style={{ height, width: '100%' }} />
 
       {/* Legend & Matching Metrics Overlay */}
-      <div className="absolute top-3 right-3 z-[400] bg-white/95 dark:bg-[#0f172a]/95 backdrop-blur-md p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl text-[11px] font-bold space-y-1.5 max-w-[240px]">
+      <div className="absolute top-3 right-3 z-20 bg-white/95 dark:bg-[#0f172a]/95 backdrop-blur-md p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl text-[11px] font-bold space-y-1.5 max-w-[240px]">
         <div className="text-[#1e3a8a] dark:text-cyan-300 uppercase tracking-wider text-[10px] border-b border-slate-100 dark:border-slate-800 pb-1">
           Route Matching Engine
         </div>
