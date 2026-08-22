@@ -7,6 +7,7 @@ import { apiRequest } from '../lib/api';
 import { User } from '@campunex/shared';
 import { Navigation2, LogOut, Shield, Menu, X } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
+import NotificationCenter from './NotificationCenter';
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
@@ -145,6 +146,7 @@ export default function Navbar() {
 
         {/* User Status Actions & Theme Toggle */}
         <div className="hidden md:flex items-center gap-3">
+          {user && <NotificationCenter />}
           <ThemeToggle />
 
           {user ? (
