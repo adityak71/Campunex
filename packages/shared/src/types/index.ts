@@ -65,24 +65,25 @@ export interface HealthCheckResponse {
   };
 }
 
-export type NotificationCategory = 'RIDE' | 'TRIP' | 'REQUEST' | 'SAFETY' | 'ACCOUNT' | 'SYSTEM';
+export type NotificationCategory = 'RIDE' | 'TRIP' | 'REQUEST' | 'SAFETY' | 'ACCOUNT' | 'SYSTEM' | 'ADMIN';
 export type NotificationPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'CRITICAL';
-export type NotificationState = 'UNREAD' | 'READ' | 'ACTION_REQUIRED' | 'INFORMATIONAL' | 'SUCCESS' | 'WARNING' | 'CRITICAL';
 
-export interface NotificationPayload {
+export interface Notification {
   id: string;
-  role: 'RIDER' | 'DRIVER' | 'BOTH';
+  recipient_id: string;
+  recipient_role: string;
+  event_type: string;
+  entity_type?: string;
+  entity_id?: string;
   category: NotificationCategory;
-  type: string;
   title: string;
   message: string;
-  timestamp: string;
-  read: boolean;
-  state: NotificationState;
   priority: NotificationPriority;
-  link?: string;
-  related_id?: string;
-  action_label?: string;
-  group_count?: number;
+  is_read: boolean;
+  read_at?: string;
+  action_type?: string;
+  action_url?: string;
+  expires_at?: string;
+  created_at: string;
+  metadata?: Record<string, any>;
 }
-

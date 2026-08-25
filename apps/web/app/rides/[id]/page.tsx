@@ -309,8 +309,6 @@ export default function RideDetailsPage() {
               </div>
             </div>
           </Card>
-
-          </Card>
         </div>
 
         {/* CONFIRMATION MODAL: "Request this ride?" */}

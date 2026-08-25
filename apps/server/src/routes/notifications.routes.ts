@@ -15,17 +15,17 @@ router.get('/', authenticate, async (req: any, res: Response) => {
     const offset = parseInt(req.query.offset as string) || 0;
 
     let query = `
-      SELECT id, role, category, type, title, message, state, priority, link, related_id, action_label, group_count,
-             read_at, created_at, (read_at IS NOT NULL) AS read
+      SELECT id, recipient_id, recipient_role, event_type, entity_type, entity_id, category, title, message, priority, 
+             is_read, read_at, action_type, action_url, expires_at, created_at, metadata
       FROM notifications
-      WHERE (user_id = $1 OR user_id IS NULL) AND (role = $2 OR role = 'BOTH')
+      WHERE recipient_id = $1 AND (recipient_role = $2 OR recipient_role = 'BOTH')
     `;
 
     const values: any[] = [userId, requestedRole];
     let paramIdx = 3;
 
     if (filter === 'UNREAD') {
-      query += ` AND read_at IS NULL`;
+      query += ` AND is_read = false`;
     }
 
     if (categoryFilter && categoryFilter !== 'ALL') {
@@ -41,7 +41,7 @@ router.get('/', authenticate, async (req: any, res: Response) => {
 
     // Unread count calculation
     const unreadRes = await pool.query(
-      `SELECT COUNT(*)::int AS unread_count FROM notifications WHERE (user_id = $1 OR user_id IS NULL) AND (role = $2 OR role = 'BOTH') AND read_at IS NULL`,
+      `SELECT COUNT(*)::int AS unread_count FROM notifications WHERE recipient_id = $1 AND (recipient_role = $2 OR recipient_role = 'BOTH') AND is_read = false`,
       [userId, requestedRole]
     );
 
@@ -63,9 +63,9 @@ router.patch('/:id/read', authenticate, async (req: any, res: Response) => {
 
     const result = await pool.query(
       `UPDATE notifications
-       SET read_at = NOW(), state = 'READ'
-       WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)
-       RETURNING id, read_at, state`,
+       SET read_at = NOW(), is_read = true
+       WHERE id = $1 AND recipient_id = $2
+       RETURNING *`,
       [notificationId, userId]
     );
 
@@ -88,8 +88,8 @@ router.patch('/read-all', authenticate, async (req: any, res: Response) => {
 
     const result = await pool.query(
       `UPDATE notifications
-       SET read_at = NOW(), state = 'READ'
-       WHERE (user_id = $1 OR user_id IS NULL) AND (role = $2 OR role = 'BOTH') AND read_at IS NULL
+       SET read_at = NOW(), is_read = true
+       WHERE recipient_id = $1 AND (recipient_role = $2 OR recipient_role = 'BOTH') AND is_read = false
        RETURNING id`,
       [userId, requestedRole]
     );
@@ -108,7 +108,7 @@ router.delete('/:id', authenticate, async (req: any, res: Response) => {
     const notificationId = req.params.id;
 
     const result = await pool.query(
-      `DELETE FROM notifications WHERE id = $1 AND (user_id = $2 OR user_id IS NULL) RETURNING id`,
+      `DELETE FROM notifications WHERE id = $1 AND recipient_id = $2 RETURNING id`,
       [notificationId, userId]
     );
 

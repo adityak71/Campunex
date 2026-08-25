@@ -123,25 +123,30 @@ export async function runMigrations(): Promise<void> {
 
     // 10. Notifications table
     await client.query(`
-      CREATE TABLE IF NOT EXISTS notifications (
+      DROP TABLE IF EXISTS notifications CASCADE;
+      CREATE TABLE notifications (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        role VARCHAR(20) NOT NULL CHECK (role IN ('RIDER', 'DRIVER', 'BOTH')),
-        category VARCHAR(20) NOT NULL CHECK (category IN ('RIDE', 'TRIP', 'REQUEST', 'SAFETY', 'ACCOUNT', 'SYSTEM')),
-        type VARCHAR(50) NOT NULL,
+        recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        recipient_role VARCHAR(20) NOT NULL,
+        event_type VARCHAR(50) NOT NULL,
+        entity_type VARCHAR(50),
+        entity_id UUID,
+        category VARCHAR(20) NOT NULL CHECK (category IN ('RIDE', 'TRIP', 'REQUEST', 'SAFETY', 'ACCOUNT', 'SYSTEM', 'ADMIN')),
         title VARCHAR(255) NOT NULL,
         message TEXT NOT NULL,
-        state VARCHAR(30) DEFAULT 'UNREAD' CHECK (state IN ('UNREAD', 'READ', 'ACTION_REQUIRED', 'INFORMATIONAL', 'SUCCESS', 'WARNING', 'CRITICAL')),
         priority VARCHAR(20) DEFAULT 'NORMAL' CHECK (priority IN ('LOW', 'NORMAL', 'HIGH', 'CRITICAL')),
-        link VARCHAR(255),
-        related_id VARCHAR(255),
-        action_label VARCHAR(100),
-        group_count INT DEFAULT 1,
+        is_read BOOLEAN DEFAULT false,
         read_at TIMESTAMPTZ,
-        created_at TIMESTAMPTZ DEFAULT NOW()
+        action_type VARCHAR(50),
+        action_url VARCHAR(255),
+        expires_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        metadata JSONB
       );
-      CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
-      CREATE INDEX IF NOT EXISTS idx_notifications_user_role ON notifications(user_id, role);
+      CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_id);
+      CREATE INDEX IF NOT EXISTS idx_notifications_recipient_role ON notifications(recipient_id, recipient_role);
+      CREATE INDEX IF NOT EXISTS idx_notifications_event ON notifications(event_type);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_notifications_idempotent ON notifications(recipient_id, event_type, entity_id) WHERE entity_id IS NOT NULL;
     `);
 
     // Fix existing rides status CHECK constraint (DROP + ADD to include OPEN, EXPIRED)

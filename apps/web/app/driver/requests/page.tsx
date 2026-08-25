@@ -14,7 +14,6 @@ import Modal from '../../../components/ui/Modal';
 import Map from '../../../components/Map';
 import { useToast } from '../../../components/ui/Toast';
 import { apiRequest } from '../../../lib/api';
-import { getMappedStatus } from '../../../lib/status';
 import { formatDepartureTime } from '../../../lib/formatters';
 import {
   ShieldCheck,

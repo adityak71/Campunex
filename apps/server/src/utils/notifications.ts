@@ -1,17 +1,21 @@
 import { pool } from '../config/db.js';
 import { io } from '../server.js';
+import { NotificationCategory, NotificationPriority, Notification } from '@campunex/shared';
 
 export interface CreateNotificationPayload {
-  userId: string;
-  role: 'RIDER' | 'DRIVER' | 'BOTH';
-  category: 'RIDE' | 'TRIP' | 'REQUEST' | 'SAFETY' | 'ACCOUNT' | 'SYSTEM';
-  type: string;
+  recipient_id: string;
+  recipient_role: string;
+  event_type: string;
+  entity_type?: string;
+  entity_id?: string;
+  category: NotificationCategory;
   title: string;
   message: string;
-  state?: 'UNREAD' | 'READ' | 'ACTION_REQUIRED' | 'INFORMATIONAL' | 'SUCCESS' | 'WARNING' | 'CRITICAL';
-  priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'CRITICAL';
-  link?: string;
-  action_label?: string;
+  priority?: NotificationPriority;
+  action_type?: string;
+  action_url?: string;
+  expires_at?: Date;
+  metadata?: Record<string, any>;
 }
 
 /**
@@ -21,40 +25,50 @@ export interface CreateNotificationPayload {
 export async function createAndEmitNotification(payload: CreateNotificationPayload): Promise<void> {
   try {
     const result = await pool.query(
-      `INSERT INTO notifications (user_id, role, category, type, title, message, state, priority, link, action_label)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       RETURNING id, user_id, role, category, type, title, message, state, priority, link, action_label, created_at`,
+      `INSERT INTO notifications (
+        recipient_id, recipient_role, event_type, entity_type, entity_id, category, title, message, priority, action_type, action_url, expires_at, metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ON CONFLICT (recipient_id, event_type, entity_id) WHERE entity_id IS NOT NULL 
+      DO NOTHING
+      RETURNING *`,
       [
-        payload.userId,
-        payload.role,
+        payload.recipient_id,
+        payload.recipient_role,
+        payload.event_type,
+        payload.entity_type || null,
+        payload.entity_id || null,
         payload.category,
-        payload.type,
         payload.title,
         payload.message,
-        payload.state || 'UNREAD',
         payload.priority || 'NORMAL',
-        payload.link || null,
-        payload.action_label || null,
+        payload.action_type || null,
+        payload.action_url || null,
+        payload.expires_at || null,
+        payload.metadata || null,
       ]
     );
 
     const notification = result.rows[0];
     if (notification) {
       // Broadcast to user's personal WebSocket room for instant delivery
-      io.to(`user:${payload.userId}`).emit('notification:new', {
+      io.to(`user:${payload.recipient_id}`).emit('notification:new', {
         id: notification.id,
-        role: notification.role,
+        recipient_id: notification.recipient_id,
+        recipient_role: notification.recipient_role,
+        event_type: notification.event_type,
+        entity_type: notification.entity_type,
+        entity_id: notification.entity_id,
         category: notification.category,
-        type: notification.type,
         title: notification.title,
         message: notification.message,
-        state: notification.state,
         priority: notification.priority,
-        link: notification.link,
-        action_label: notification.action_label,
-        timestamp: notification.created_at,
-        read: false,
-      });
+        is_read: notification.is_read,
+        action_type: notification.action_type,
+        action_url: notification.action_url,
+        expires_at: notification.expires_at,
+        created_at: notification.created_at,
+        metadata: notification.metadata,
+      } as Notification);
     }
   } catch (err) {
     // Non-critical: log but don't fail the parent operation

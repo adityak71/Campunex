@@ -103,16 +103,17 @@ export async function createRide(data: {
 
   // Notify driver their ride was published (DB + WebSocket)
   await createAndEmitNotification({
-    userId: driverId,
-    role: 'DRIVER',
+    recipient_id: driverId,
+    recipient_role: 'DRIVER',
+    event_type: 'RIDE_CREATED',
+    entity_type: 'RIDE',
+    entity_id: ride.id,
     category: 'RIDE',
-    type: 'RIDE_PUBLISHED_SUCCESSFULLY',
     title: 'Ride Published Successfully',
-    message: `Your route from ${row.origin_name} to ${row.destination_name} is now open for 500m route matching.`,
-    state: 'SUCCESS',
+    message: `Your route from ${row.origin_name} to ${row.destination_name} is now open for route matching.`,
     priority: 'NORMAL',
-    link: '/driver/rides',
-    action_label: 'View Ride',
+    action_type: 'VIEW_RIDE',
+    action_url: `/driver/rides/${ride.id}`,
   });
 
   return ride;
@@ -227,16 +228,17 @@ export async function requestRide(data: {
   const driverIdForNotif = rideDriverRes.rows[0]?.driver_id;
   if (driverIdForNotif) {
     await createAndEmitNotification({
-      userId: driverIdForNotif,
-      role: 'DRIVER',
+      recipient_id: driverIdForNotif,
+      recipient_role: 'DRIVER',
+      event_type: 'RIDE_REQUEST_RECEIVED',
+      entity_type: 'RIDE_REQUEST',
+      entity_id: insertRes.rows[0].id,
       category: 'REQUEST',
-      type: 'NEW_RIDER_REQUEST',
       title: 'New Ride Seat Request',
       message: 'A rider has requested a seat on your published route.',
-      state: 'ACTION_REQUIRED',
       priority: 'HIGH',
-      link: '/driver/requests',
-      action_label: 'Review Request',
+      action_type: 'REVIEW_REQUEST',
+      action_url: '/driver/requests',
     });
   }
 
@@ -367,16 +369,17 @@ export async function updateRideRequestStatus(data: {
 
       // Notify rider their request was accepted (DB + WebSocket)
       await createAndEmitNotification({
-        userId: reqInfo.rider_id,
-        role: 'RIDER',
+        recipient_id: reqInfo.rider_id,
+        recipient_role: 'RIDER',
+        event_type: 'RIDE_REQUEST_ACCEPTED',
+        entity_type: 'TRIP',
+        entity_id: tripId,
         category: 'REQUEST',
-        type: 'REQUEST_ACCEPTED',
         title: 'Driver Accepted Your Request!',
         message: 'Your seat booking has been accepted. A live trip tracking room is now active.',
-        state: 'SUCCESS',
         priority: 'HIGH',
-        link: tripId ? `/trip/${tripId}` : `/rides/requests`,
-        action_label: 'View Trip',
+        action_type: 'VIEW_TRIP',
+        action_url: tripId ? `/trip/${tripId}` : `/rides/requests`,
       });
 
       await client.query('COMMIT');
@@ -388,16 +391,17 @@ export async function updateRideRequestStatus(data: {
 
       // Notify rider their request was declined (DB + WebSocket)
       await createAndEmitNotification({
-        userId: reqInfo.rider_id,
-        role: 'RIDER',
+        recipient_id: reqInfo.rider_id,
+        recipient_role: 'RIDER',
+        event_type: 'RIDE_REQUEST_REJECTED',
+        entity_type: 'RIDE_REQUEST',
+        entity_id: requestId,
         category: 'REQUEST',
-        type: 'REQUEST_DECLINED',
         title: 'Driver Declined Your Request',
         message: 'Your seat request was declined. Explore other compatible rides.',
-        state: 'WARNING',
         priority: 'NORMAL',
-        link: '/rides/find',
-        action_label: 'Find Rides',
+        action_type: 'FIND_RIDES',
+        action_url: '/rides/find',
       });
 
       await client.query('COMMIT');

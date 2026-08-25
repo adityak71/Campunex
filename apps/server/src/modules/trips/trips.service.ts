@@ -123,16 +123,17 @@ export async function processStartOtpVerification(
   const riderId = riderRes.rows[0]?.rider_id;
   if (riderId) {
     await createAndEmitNotification({
-      userId: riderId,
-      role: 'RIDER',
+      recipient_id: riderId,
+      recipient_role: 'RIDER',
+      event_type: 'TRIP_STARTED',
+      entity_type: 'TRIP',
+      entity_id: tripId,
       category: 'TRIP',
-      type: 'TRIP_STARTED',
       title: 'Trip Has Started!',
       message: 'Your driver has verified your OTP. The trip is now in progress.',
-      state: 'SUCCESS',
       priority: 'HIGH',
-      link: `/trip/${tripId}`,
-      action_label: 'Track Trip',
+      action_type: 'TRACK_TRIP',
+      action_url: `/trip/${tripId}`,
     });
   }
 
@@ -227,29 +228,31 @@ export async function processCompletionOtpVerification(
 
   if (riderIdComp) {
     await createAndEmitNotification({
-      userId: riderIdComp,
-      role: 'RIDER',
+      recipient_id: riderIdComp,
+      recipient_role: 'RIDER',
+      event_type: 'TRIP_COMPLETED',
+      entity_type: 'TRIP',
+      entity_id: tripId,
       category: 'TRIP',
-      type: 'TRIP_COMPLETED',
       title: 'Trip Completed!',
       message: 'Your campus commute has been completed successfully. Thank you for using Campunex!',
-      state: 'SUCCESS',
       priority: 'NORMAL',
-      link: completionLink,
-      action_label: 'View Trip',
+      action_type: 'VIEW_TRIP',
+      action_url: completionLink,
     });
   }
   await createAndEmitNotification({
-    userId: driverId,
-    role: 'DRIVER',
+    recipient_id: driverId,
+    recipient_role: 'DRIVER',
+    event_type: 'TRIP_COMPLETED',
+    entity_type: 'TRIP',
+    entity_id: tripId,
     category: 'TRIP',
-    type: 'TRIP_COMPLETED',
     title: 'Trip Completed!',
     message: 'All completion OTPs verified. Trip logged in Campunex history.',
-    state: 'SUCCESS',
     priority: 'NORMAL',
-    link: '/driver/history',
-    action_label: 'View History',
+    action_type: 'VIEW_HISTORY',
+    action_url: '/driver/history',
   });
 
   io.to(`trip:${tripId}`).emit('trip:status_change', {

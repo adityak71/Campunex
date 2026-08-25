@@ -120,9 +120,9 @@ export default function Navbar() {
                   History
                 </Link>
                 <Link
-                  href="/driver/notifications"
+                  href="/notifications"
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                    pathname === '/driver/notifications'
+                    pathname === '/notifications'
                       ? 'bg-teal-50 dark:bg-cyan-950 text-teal-700 dark:text-cyan-300 border border-teal-300 dark:border-cyan-800'
                       : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
