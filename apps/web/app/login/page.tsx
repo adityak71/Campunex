@@ -7,11 +7,10 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import Card from '../../components/ui/Card';
-import Badge from '../../components/ui/Badge';
+import Card, { CardBody } from '../../components/ui/Card';
 import { useToast } from '../../components/ui/Toast';
 import { apiRequest } from '../../lib/api';
-import { Navigation2, Mail, Lock, Eye, EyeOff, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('driver@lpu.in');
@@ -56,111 +55,103 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
 
-      <div className="flex-1 flex items-center justify-center p-4 py-12">
-        <Card className="w-full max-w-md space-y-6">
-          <div className="text-center space-y-2">
-            <div className="w-12 h-12 bg-[#1e3a8a] dark:bg-cyan-600 rounded-2xl flex items-center justify-center mx-auto shadow-md">
-              <Navigation2 className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-[#1e3a8a] dark:text-cyan-300 tracking-tight">
-              Welcome Back to Campunex
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Sign in to access your campus rides & 500m route matching
-            </p>
-          </div>
-
-          {error && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-xl text-rose-700 dark:text-rose-300 text-xs font-semibold">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="Campus Email (.edu / .in)"
-              type="email"
-              required
-              leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="student@lpu.in"
-            />
-
-            <Input
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              required
-              leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
-              rightIcon={
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              }
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-
-            <div className="flex justify-between items-center text-xs">
-              <span />
-              <Link href="/forgot-password" className="text-teal-600 dark:text-cyan-400 hover:underline font-semibold">
-                Forgot password?
+      <main className="flex-1 flex items-center justify-center p-4">
+        <Card className="w-full max-w-[600px] p-8 md:p-10 !rounded-[26px]">
+          <CardBody className="!p-0 space-y-8">
+            
+            {/* Header Area */}
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-[12px] font-[600] text-white/80 mb-4">
+                  <span className="w-2 h-2 rounded-full bg-accent1 shadow-[0_0_8px_rgba(181,108,255,0.6)]"></span>
+                  Access
+                </div>
+                <h1 className="text-3xl font-[900] tracking-tight text-white mb-2">Sign in</h1>
+                <p className="text-sm text-white/60">Access your dashboard and trip updates.</p>
+              </div>
+              <Link href="/">
+                <Button variant="ghost" size="sm" className="!rounded-full text-white/70 hover:text-white border-white/10">
+                  Back to site
+                </Button>
               </Link>
             </div>
 
-            {/* Quick Demo Selectors */}
-            <div className="p-3 bg-[#e0f2fe]/60 dark:bg-cyan-950/40 rounded-xl border border-[#bae6fd] dark:border-cyan-800 text-xs space-y-1">
-              <div className="font-bold text-[#1e3a8a] dark:text-cyan-300 flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-teal-600 dark:text-cyan-400" /> Demo Quick Select:
+            {error && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
+                {error}
               </div>
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => { setEmail('driver@lpu.in'); setPassword('password123'); }}
-                  className="px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-slate-50 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-[#1e3a8a] dark:text-cyan-300 text-[11px] shadow-sm transition"
-                >
-                  🚘 Demo Driver
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setEmail('rider@lpu.in'); setPassword('password123'); }}
-                  className="px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-slate-50 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-[#1e3a8a] dark:text-cyan-300 text-[11px] shadow-sm transition"
-                >
-                  🚴 Demo Rider
-                </button>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-1.5">
+                <label className="block text-sm font-bold text-white/90">Email</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/40">
+                    <Mail className="w-5 h-5" />
+                  </div>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white focus:outline-none focus:border-accent1/50 focus:ring-1 focus:ring-accent1/50 transition-all placeholder:text-white/20"
+                    placeholder="name@university.edu"
+                  />
+                </div>
               </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-sm font-bold text-white/90">Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/40">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-12 text-white focus:outline-none focus:border-accent1/50 focus:ring-1 focus:ring-accent1/50 transition-all placeholder:text-white/20"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-white/40 hover:text-white/70 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 pt-4">
+                <Button type="submit" variant="primary" isLoading={loading} className="px-8 !rounded-xl">
+                  Sign in
+                </Button>
+                <Link href="/forgot-password">
+                  <Button type="button" variant="ghost" className="!rounded-xl border-white/10 text-white/80">
+                    Forgot password
+                  </Button>
+                </Link>
+              </div>
+            </form>
+
+            <div className="flex items-center gap-3 pt-4 border-t border-white/10 text-sm text-white/60">
+              New here? 
+              <Link href="/register">
+                <Button variant="ghost" size="sm" className="!rounded-full border-white/10 text-white/80 hover:text-white">
+                  Create an account
+                </Button>
+              </Link>
             </div>
-
-            <Button
-              type="submit"
-              variant="primary"
-              size="md"
-              isLoading={loading}
-              className="w-full"
-              rightIcon={<ArrowRight className="w-4 h-4" />}
-            >
-              Sign In
-            </Button>
-          </form>
-
-          <div className="text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-4">
-            Don't have an account?{' '}
-            <Link href="/register" className="text-teal-600 dark:text-cyan-400 hover:underline font-bold">
-              Create student account
-            </Link>
-          </div>
+            
+          </CardBody>
         </Card>
-      </div>
-
-      <Footer />
+      </main>
     </div>
   );
 }

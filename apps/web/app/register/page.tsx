@@ -4,22 +4,19 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
 import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
-import Card from '../../components/ui/Card';
-import Badge from '../../components/ui/Badge';
+import Card, { CardBody } from '../../components/ui/Card';
 import { useToast } from '../../components/ui/Toast';
 import { apiRequest } from '../../lib/api';
-import { User, UserRole } from '@campunex/shared';
-import { Navigation2, Mail, Lock, User as UserIcon, Building, ShieldCheck, ArrowRight } from 'lucide-react';
 
 export default function RegisterPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('RIDER');
-  const [institutionName, setInstitutionName] = useState('Lovely Professional University');
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    university: 'Lovely Professional University',
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -28,29 +25,21 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (!email.includes('@')) {
-      setError('Please provide a valid email address');
-      return;
-    }
-
     setLoading(true);
 
     try {
       const res = await apiRequest('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-          role,
-          institution_name: institutionName,
-        }),
+        body: JSON.stringify(formData),
       });
 
       if (res.token) {
         localStorage.setItem('campunex_token', res.token);
-        showToast('Registration successful! Please verify your email.', 'success');
+        showToast('Registration successful!', 'success');
+        
+        // Always redirect to dashboard, role might be default RIDER initially
+        router.push('/dashboard');
+      } else {
         router.push('/verify');
       }
     } catch (err: any) {
@@ -63,121 +52,121 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
 
-      <div className="flex-1 flex items-center justify-center p-4 py-12">
-        <Card className="w-full max-w-lg space-y-6">
-          <div className="text-center space-y-2">
-            <div className="w-12 h-12 bg-[#1e3a8a] dark:bg-cyan-600 rounded-2xl flex items-center justify-center mx-auto shadow-md">
-              <Navigation2 className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-[#1e3a8a] dark:text-cyan-300 tracking-tight">
-              Create Your Campus Account
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-              Use your official university email domain (.edu or .in) to join your campus commute network
-            </p>
-          </div>
-
-          {error && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-xl text-rose-700 dark:text-rose-300 text-xs font-semibold">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="Full Name"
-              type="text"
-              required
-              leftIcon={<UserIcon className="w-4 h-4 text-slate-400" />}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Alex Morgan"
-            />
-
-            <Input
-              label="University Email Address"
-              type="email"
-              required
-              leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="student@lpu.in"
-              helperText="Must be an official .edu or .in campus domain"
-            />
-
-            <Input
-              label="Password"
-              type="password"
-              required
-              leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 6 characters"
-            />
-
-            <Input
-              label="University Name"
-              type="text"
-              required
-              leftIcon={<Building className="w-4 h-4 text-slate-400" />}
-              value={institutionName}
-              onChange={(e) => setInstitutionName(e.target.value)}
-              placeholder="Lovely Professional University"
-            />
-
-            <div className="space-y-1.5 text-left">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Account Commute Role</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRole('RIDER')}
-                  className={`p-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
-                    role === 'RIDER'
-                      ? 'bg-[#e0f2fe] dark:bg-cyan-950/80 border-teal-500 text-[#1e3a8a] dark:text-cyan-300'
-                      : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  🚴 Rider (Passenger)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('DRIVER')}
-                  className={`p-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
-                    role === 'DRIVER'
-                      ? 'bg-[#e0f2fe] dark:bg-cyan-950/80 border-teal-500 text-[#1e3a8a] dark:text-cyan-300'
-                      : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  🚘 Driver (Offer Seats)
-                </button>
+      <main className="flex-1 flex items-center justify-center p-4">
+        <Card className="w-full max-w-[600px] p-8 md:p-10 !rounded-[26px]">
+          <CardBody className="!p-0 space-y-8">
+            
+            {/* Header Area */}
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-[12px] font-[600] text-white/80 mb-4">
+                  <span className="w-2 h-2 rounded-full bg-accent1 shadow-[0_0_8px_rgba(181,108,255,0.6)]"></span>
+                  Access
+                </div>
+                <h1 className="text-3xl font-[900] tracking-tight text-white mb-2">Create account</h1>
+                <p className="text-sm text-white/60">Join with your campus email for verification.</p>
               </div>
+              <Link href="/">
+                <Button variant="ghost" size="sm" className="!rounded-full text-white/70 hover:text-white border-white/10">
+                  Back to site
+                </Button>
+              </Link>
             </div>
 
-            <Button
-              type="submit"
-              variant="teal"
-              size="md"
-              isLoading={loading}
-              className="w-full"
-              rightIcon={<ArrowRight className="w-4 h-4" />}
-            >
-              Register Campus Account
-            </Button>
-          </form>
+            {error && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
+                {error}
+              </div>
+            )}
 
-          <div className="text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-4">
-            Already have an account?{' '}
-            <Link href="/login" className="text-teal-600 dark:text-cyan-400 hover:underline font-bold">
-              Sign In
-            </Link>
-          </div>
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-bold text-white/90">First name</label>
+                  <input
+                    type="text"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    required
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-accent1/50 focus:ring-1 focus:ring-accent1/50 transition-all placeholder:text-white/20"
+                    placeholder="Ava"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-bold text-white/90">Last name</label>
+                  <input
+                    type="text"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    required
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-accent1/50 focus:ring-1 focus:ring-accent1/50 transition-all placeholder:text-white/20"
+                    placeholder="Nguyen"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-sm font-bold text-white/90">Email</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-accent1/50 focus:ring-1 focus:ring-accent1/50 transition-all placeholder:text-white/20"
+                  placeholder="ava@university.edu"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-sm font-bold text-white/90">Password</label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                  minLength={6}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-accent1/50 focus:ring-1 focus:ring-accent1/50 transition-all placeholder:text-white/20"
+                  placeholder="Create a password"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-sm font-bold text-white/90">University</label>
+                <select
+                  value={formData.university}
+                  onChange={(e) => setFormData({ ...formData, university: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-accent1/50 focus:ring-1 focus:ring-accent1/50 transition-all appearance-none"
+                >
+                  <option className="bg-slate-900 text-white" value="">Select...</option>
+                  <option className="bg-slate-900 text-white" value="Lovely Professional University">Lovely Professional University</option>
+                  <option className="bg-slate-900 text-white" value="Chandigarh University">Chandigarh University</option>
+                  <option className="bg-slate-900 text-white" value="Other">Other</option>
+                </select>
+              </div>
+
+              <div className="pt-2">
+                <Button type="submit" variant="primary" isLoading={loading} className="w-full !rounded-xl py-3.5">
+                  Create account
+                </Button>
+              </div>
+            </form>
+
+            <div className="flex items-center gap-3 pt-4 border-t border-white/10 text-sm text-white/60">
+              Already have an account?
+              <Link href="/login">
+                <Button variant="ghost" size="sm" className="!rounded-full border-white/10 text-white/80 hover:text-white">
+                  Sign in
+                </Button>
+              </Link>
+            </div>
+            
+          </CardBody>
         </Card>
-      </div>
-
-      <Footer />
+      </main>
     </div>
   );
 }

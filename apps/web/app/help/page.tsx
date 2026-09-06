@@ -52,21 +52,21 @@ export default function HelpPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen text-white flex flex-col font-sans transition-colors duration-200">
       <Navbar />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12 flex-1 space-y-12 w-full">
         <div className="text-center space-y-4 max-w-2xl mx-auto">
           <Badge variant="info">SUPPORT & HELP</Badge>
-          <h1 className="text-4xl font-extrabold text-[#1e3a8a] dark:text-cyan-300 tracking-tight">
+          <h1 className="text-4xl font-extrabold text-white tracking-tight">
             Help Center
           </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
+          <p className="text-sm text-white/60">
             Search support articles or explore topics below
           </p>
 
           <Input
-            leftIcon={<Search className="w-4 h-4 text-slate-400" />}
+            leftIcon={<Search className="w-4 h-4 text-white/40" />}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search help topics, OTP verification, or route matching..."
@@ -76,60 +76,60 @@ export default function HelpPage() {
         {/* Categories */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
           {categories.map(({ icon: Icon, title, desc }, idx) => (
-            <Card key={idx} hoverable className="p-6 space-y-2">
-              <div className="w-10 h-10 bg-teal-50 dark:bg-cyan-950/80 text-teal-600 dark:text-cyan-400 rounded-xl flex items-center justify-center">
+            <div key={idx} className="bg-white/5 border border-white/10 p-6 rounded-[22px] space-y-2 transition-all hover:border-accent3/30 hover:shadow-[0_0_20px_rgba(14,165,233,0.15)]">
+              <div className="w-10 h-10 bg-white/10 border border-white/20 text-accent3 rounded-xl flex items-center justify-center">
                 <Icon className="w-5 h-5" />
               </div>
-              <h2 className="font-bold text-sm text-slate-900 dark:text-slate-100">{title}</h2>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">{desc}</p>
-            </Card>
+              <h2 className="font-bold text-sm text-white">{title}</h2>
+              <p className="text-[11px] text-white/60 leading-normal">{desc}</p>
+            </div>
           ))}
         </div>
 
         {/* FAQ List */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-[#1e3a8a] dark:text-cyan-300">Frequently Asked Questions</h2>
+          <h2 className="text-xl font-bold text-white">Frequently Asked Questions</h2>
           <div className="space-y-3">
             {filteredFaqs.map((faq, idx) => (
-              <Card key={idx} className="p-0 overflow-hidden">
+              <div key={idx} className="bg-white/5 border border-white/10 rounded-[22px] overflow-hidden">
                 <button
                   onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                  className="w-full px-6 py-4 text-left font-bold text-slate-900 dark:text-slate-100 text-sm flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-800/60 transition"
+                  className="w-full px-6 py-4 text-left font-bold text-white text-sm flex justify-between items-center hover:bg-white/10 transition"
                 >
                   <div className="flex items-center gap-2">
                     <Badge variant="default">{faq.cat}</Badge>
                     <span>{faq.q}</span>
                   </div>
                   <ChevronDown
-                    className={`w-4 h-4 text-slate-400 transition-transform ${
+                    className={`w-4 h-4 text-white/40 transition-transform ${
                       openFaq === idx ? 'rotate-180' : ''
                     }`}
                   />
                 </button>
                 {openFaq === idx && (
-                  <div className="px-6 pb-4 text-xs text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-3 leading-relaxed">
+                  <div className="px-6 pb-4 text-xs text-white/60 border-t border-white/10 pt-3 leading-relaxed">
                     {faq.a}
                   </div>
                 )}
-              </Card>
+              </div>
             ))}
           </div>
         </div>
 
         {/* Contact Support CTA Card */}
-        <Card className="p-8 text-center bg-slate-100 dark:bg-slate-900 space-y-3">
-          <h2 className="text-xl font-bold text-[#1e3a8a] dark:text-cyan-300">Still Need Help?</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+        <div className="bg-white/5 border border-white/10 rounded-[22px] p-8 text-center space-y-3 mt-12">
+          <h2 className="text-xl font-bold text-white">Still Need Help?</h2>
+          <p className="text-xs text-white/60 max-w-md mx-auto">
             Our campus support team is available to assist with account verification, trip issues, or platform questions.
           </p>
           <div className="pt-2 flex justify-center">
             <Link href="/contact">
-              <Button variant="teal" size="md" leftIcon={<MessageSquare className="w-4 h-4" />}>
+              <Button variant="primary" size="md" leftIcon={<MessageSquare className="w-4 h-4" />}>
                 Contact Support Team
               </Button>
             </Link>
           </div>
-        </Card>
+        </div>
       </main>
 
       <Footer />

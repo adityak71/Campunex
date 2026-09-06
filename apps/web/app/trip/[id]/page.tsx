@@ -185,6 +185,15 @@ export default function TripLivePage() {
     };
   }, [tripId, router, showToast]);
 
+  const handleRequestStartOtp = async () => {
+    try {
+      await apiRequest(`/trips/${tripId}/start-otp`, { method: 'POST' });
+      showToast('Initiation OTP code generated and sent to Rider.', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to request OTP', 'error');
+    }
+  };
+
   // Per-Rider OTP verification by Driver - calls real backend API
   const handleVerifyRiderOtp = async (riderId: string) => {
     const targetRider = acceptedRiders.find((r) => r.id === riderId);
@@ -429,6 +438,13 @@ export default function TripLivePage() {
 
                           <div className="flex items-center gap-2 w-full sm:w-auto">
                             <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleRequestStartOtp}
+                            >
+                              Request OTP
+                            </Button>
+                            <Button
                               variant="teal"
                               size="sm"
                               onClick={() => handleVerifyRiderOtp(rider.id)}
@@ -451,17 +467,93 @@ export default function TripLivePage() {
               </Card>
             )}
 
-            {/* Rider View OTP Display */}
-            {!isDriver && !isCompleted && (tripStatus === 'ACCEPTED' || tripStatus === 'STARTED' || tripStatus === 'COMPLETION_PENDING') && startOtpCode && (
-              <Card className="p-6 space-y-3 bg-teal-50/60 dark:bg-cyan-950/40 border-2 border-teal-300 dark:border-cyan-800 text-center">
-                <div className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Your 4-Digit Initiation OTP</div>
-                <div className="font-mono text-4xl font-extrabold text-teal-700 dark:text-cyan-300 tracking-widest">
-                  {startOtpCode}
+            {/* Completion OTP Card (For Driver) */}
+            {isDriver && (tripStatus === 'IN_PROGRESS' || tripStatus === 'COMPLETION_PENDING') && (
+              <Card className="p-6 space-y-4 border-2 border-emerald-200 dark:border-emerald-800">
+                <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <h2 className="text-base font-extrabold text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5" />
+                    FINISH TRIP
+                  </h2>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Provide this code to driver {trip.driver_name || 'Rahul Kumar'} upon meeting at your pickup landmark.
-                </p>
+                <div className="text-sm text-slate-600 dark:text-slate-400">
+                  You have reached the destination! Request the final Completion OTP from your passenger to officially close this trip and record the route.
+                </div>
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <Input
+                    placeholder="Enter 4-digit completion OTP"
+                    maxLength={4}
+                    id="completionOtpInput"
+                  />
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          await apiRequest(`/trips/${tripId}/completion-otp`, { method: 'POST' });
+                          showToast('Completion OTP sent to Rider.', 'success');
+                        } catch (err: any) {
+                          showToast(err.message || 'Failed to request completion OTP', 'error');
+                        }
+                      }}
+                    >
+                      Request OTP
+                    </Button>
+                    <Button
+                      variant="teal"
+                      size="sm"
+                      onClick={async () => {
+                        const input = document.getElementById('completionOtpInput') as HTMLInputElement;
+                        if (!input?.value?.trim()) {
+                          showToast('Please enter the completion OTP', 'error');
+                          return;
+                        }
+                        try {
+                          await apiRequest(`/trips/${tripId}/verify-completion-otp`, {
+                            method: 'POST',
+                            body: JSON.stringify({ otp: input.value.trim() }),
+                          });
+                          showToast('Trip Completed Successfully!', 'success');
+                        } catch (err: any) {
+                          showToast(`Completion verification failed: ${err.message}`, 'error');
+                        }
+                      }}
+                    >
+                      Verify & Finish
+                    </Button>
+                  </div>
+                </div>
               </Card>
+            )}
+
+            {/* Rider View OTP Display */}
+            {!isDriver && !isCompleted && (tripStatus === 'ACCEPTED' || tripStatus === 'OTP_PENDING' || tripStatus === 'STARTED' || tripStatus === 'COMPLETION_PENDING') && (
+              startOtpCode ? (
+                <Card className="p-6 space-y-3 bg-teal-50/60 dark:bg-cyan-950/40 border-2 border-teal-300 dark:border-cyan-800 text-center">
+                  <div className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+                    {tripStatus === 'COMPLETION_PENDING' ? 'Your 4-Digit Completion OTP' : 'Your 4-Digit Initiation OTP'}
+                  </div>
+                  <div className="font-mono text-4xl font-extrabold text-teal-700 dark:text-cyan-300 tracking-widest">
+                    {startOtpCode}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Provide this code to driver {trip.driver_name || 'Rahul Kumar'} upon meeting at your pickup landmark.
+                  </p>
+                </Card>
+              ) : (tripStatus === 'OTP_PENDING' || tripStatus === 'COMPLETION_PENDING') ? (
+                <Card className="p-6 space-y-3 bg-amber-50/60 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-800 text-center">
+                  <div className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase">
+                    OTP Required
+                  </div>
+                  <div className="text-sm font-bold text-amber-700 dark:text-amber-300">
+                    Please ask your driver to click &quot;Request OTP&quot; on their screen to generate your 4-digit code.
+                  </div>
+                  <p className="text-xs text-amber-500 dark:text-amber-400/80">
+                    If they already requested it, ask them to click it again to resend it to your device.
+                  </p>
+                </Card>
+              ) : null
             )}
 
             {/* Visual Trip Progress Bar with Strict States */}

@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Navbar from '../../../components/Navbar';
-import Footer from '../../../components/Footer';
+import WorkspaceLayout from '../../../components/layouts/WorkspaceLayout';
 import LocationPicker from '../../../components/LocationPicker';
 import Map from '../../../components/Map';
 import MatchBar from '../../../components/MatchBar';
@@ -175,20 +174,20 @@ function FindRideContent() {
   const selectedPointDest = { latitude: parseFloat(destLat), longitude: parseFloat(destLng) };
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-8 w-full">
+    <div className="space-y-6 w-full">
       {/* Header */}
       <div className="space-y-2">
         <Badge variant="info">DRIVER-FIRST COMMUTE ENGINE</Badge>
-        <h1 className="text-3xl font-extrabold text-[#1e3a8a] dark:text-cyan-300 tracking-tight">
+        <h1 className="text-3xl font-extrabold text-white tracking-tight">
           Find Compatible Driver Rides
         </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-white/60">
           Drivers publish open routes • PostGIS spatial engine matches overlapping routes within 500m proximity
         </p>
       </div>
 
       {/* Primary Search Card */}
-      <Card className="space-y-6 p-6">
+      <div className="bg-white/5 border border-white/10 rounded-[22px] space-y-6 p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <LocationPicker
             label="Pickup Origin Landmark"
@@ -223,21 +222,21 @@ function FindRideContent() {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-1 text-left">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Date</label>
+            <label className="text-xs font-bold text-white/60 /70">Date</label>
             <input
               type="date"
               value={searchDate}
               onChange={(e) => setSearchDate(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 font-semibold"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-semibold"
             />
           </div>
 
           <div className="space-y-1 text-left">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Time Window</label>
+            <label className="text-xs font-bold text-white/60 /70">Time Window</label>
             <select
               value={searchTimeWindow}
               onChange={(e) => setSearchTimeWindow(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 font-semibold"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-semibold"
             >
               <option value="ANY">Flexible / Any Time</option>
               <option value="MORNING">Morning (6AM - 12PM)</option>
@@ -247,11 +246,11 @@ function FindRideContent() {
           </div>
 
           <div className="space-y-1 text-left">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Vehicle Type</label>
+            <label className="text-xs font-bold text-white/60 /70">Vehicle Type</label>
             <select
               value={vehicleFilter}
               onChange={(e) => setVehicleFilter(e.target.value as any)}
-              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 font-semibold"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-semibold"
             >
               <option value="ANY">🚘 Any Vehicle (Car / Bike)</option>
               <option value="CAR">🚗 Car Commute Only</option>
@@ -261,37 +260,37 @@ function FindRideContent() {
         </div>
 
         <div className="pt-2 flex justify-between items-center">
-          <span className="text-xs text-slate-500 font-medium">
-            Proximity Threshold: <strong className="text-teal-600 dark:text-cyan-400">Within 500m Overlap</strong>
+          <span className="text-xs text-white/50 font-medium">
+            Proximity Threshold: <strong className="text-accent3 ">Within 500m Overlap</strong>
           </span>
 
           <Button
             onClick={fetchMatches}
             isLoading={loading}
-            variant="teal"
+            variant="primary"
             size="md"
             leftIcon={<Search className="w-4 h-4" />}
           >
             Find Compatible Rides
           </Button>
         </div>
-      </Card>
+      </div>
 
       {/* Error Banner */}
       {error && (
-        <div className="p-4 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-2xl text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2">
+        <div className="p-4 bg-white/5 border border-white/10 rounded-2xl text-white/80 text-xs font-bold flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {/* Filters & Sorting Toolbar */}
-      <Card className="p-4 space-y-3">
+      <div className="bg-white/5 border border-white/10 rounded-[22px] p-4 space-y-3">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 text-xs">
           {/* Filters Group */}
           <div className="flex flex-wrap items-center gap-3">
-            <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-              <Filter className="w-3.5 h-3.5 text-teal-500" /> Filters:
+            <span className="font-bold text-white/60 /70 flex items-center gap-1">
+              <Filter className="w-3.5 h-3.5 text-accent3" /> Filters:
             </span>
 
             {/* Vehicle Filter */}
@@ -302,8 +301,8 @@ function FindRideContent() {
                   onClick={() => setFilterVehicle(v)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border ${
                     filterVehicle === v
-                      ? 'bg-teal-50 dark:bg-cyan-950 text-teal-700 dark:text-cyan-300 border-teal-300 dark:border-cyan-800'
-                      : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                      ? 'bg-white/5 text-white/80 border-white/10'
+                      : 'bg-white/5 text-white/60 border-white/10'
                   }`}
                 >
                   {v === 'ALL' ? 'All Vehicles' : v === 'CAR' ? '🚗 Car' : '🏍️ Bike'}
@@ -319,8 +318,8 @@ function FindRideContent() {
                   onClick={() => setFilterMatchQuality(mq)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border ${
                     filterMatchQuality === mq
-                      ? 'bg-teal-50 dark:bg-cyan-950 text-teal-700 dark:text-cyan-300 border-teal-300 dark:border-cyan-800'
-                      : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                      ? 'bg-white/5 text-white/80 border-white/10'
+                      : 'bg-white/5 text-white/60 border-white/10'
                   }`}
                 >
                   {mq === 'ALL' ? 'All Matches' : `${mq}%+ Match`}
@@ -331,13 +330,13 @@ function FindRideContent() {
 
           {/* Sorting Dropdown */}
           <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
-            <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-              <ArrowUpDown className="w-3.5 h-3.5 text-teal-500" /> Sort By:
+            <span className="font-bold text-white/60 /70 flex items-center gap-1">
+              <ArrowUpDown className="w-3.5 h-3.5 text-accent3" /> Sort By:
             </span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none"
+              className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold text-white focus:outline-none"
             >
               <option value="BEST_MATCH">⭐ Best Route Match</option>
               <option value="CLOSEST_PICKUP">📍 Closest Pickup Proximity</option>
@@ -345,20 +344,20 @@ function FindRideContent() {
             </select>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* DUAL SPLIT LAYOUT (DESKTOP: MAP + LIST / MOBILE: LIST + MAP TOGGLE) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* LEFT PANE: Compatible Open Ride Cards List (7 Cols) */}
         <div className="lg:col-span-7 space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-bold text-[#1e3a8a] dark:text-cyan-300">
+            <h2 className="text-lg font-bold text-white">
               Compatible Open Driver Rides ({processedMatches.length})
             </h2>
 
             <button
               onClick={() => setShowMobileMap(!showMobileMap)}
-              className="lg:hidden px-3 py-1.5 bg-teal-50 dark:bg-cyan-950 text-teal-700 dark:text-cyan-300 border border-teal-300 dark:border-cyan-800 rounded-xl text-xs font-bold"
+              className="lg:hidden px-3 py-1.5 bg-white/5 text-white/80 border border-white/10 rounded-xl text-xs font-bold"
             >
               {showMobileMap ? 'Hide Map' : 'Show Map'}
             </button>
@@ -370,16 +369,16 @@ function FindRideContent() {
               <Skeleton className="h-44 w-full" />
             </div>
           ) : processedMatches.length === 0 ? (
-            <Card className="p-8 text-center space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-sm">
+            <div className="bg-white/5 border border-white/10 rounded-[22px] p-8 text-center space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-white/5 text-white/80 flex items-center justify-center mx-auto shadow-sm">
                 <AlertCircle className="w-6 h-6" />
               </div>
 
               <div className="space-y-1">
-                <h3 className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
+                <h3 className="text-xl font-extrabold text-white">
                   No compatible rides found
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                <p className="text-xs text-white/60 max-w-sm mx-auto">
                   There are currently no open driver rides matching this route and time.
                 </p>
               </div>
@@ -395,7 +394,7 @@ function FindRideContent() {
                 </Button>
 
                 <Button
-                  variant="teal"
+                  variant="primary"
                   size="sm"
                   onClick={() => setShowAlertModal(true)}
                   leftIcon={<Bell className="w-4 h-4" />}
@@ -403,7 +402,7 @@ function FindRideContent() {
                   Notify Me When a Ride Appears
                 </Button>
               </div>
-            </Card>
+            </div>
           ) : (
             <div className="space-y-4">
               {processedMatches.map((match) => {
@@ -414,21 +413,21 @@ function FindRideContent() {
                 const departureFormatted = formatDepartureTime(rideObj.departure_time);
 
                 return (
-                  <Card key={rideObj.id || match.ride_id} hoverable className="p-6 space-y-4">
+                  <div  key={rideObj.id || match.ride_id} className="bg-white/5 border border-white/10 rounded-[22px] p-6 space-y-4">
                     {/* Header Driver Info */}
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-2xl bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 flex items-center justify-center font-extrabold text-base shadow-sm">
+                        <div className="w-11 h-11 rounded-2xl bg-white/5 text-white/80 flex items-center justify-center font-extrabold text-base shadow-sm">
                           {match.driver_name ? match.driver_name.substring(0, 2).toUpperCase() : 'DR'}
                         </div>
                         <div>
-                          <div className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                          <div className="text-sm font-bold text-white flex items-center gap-1.5">
                             {match.driver_name}
                             <Badge variant="verified">
-                              <ShieldCheck className="w-3 h-3 text-teal-600" /> .edu Verified
+                              <ShieldCheck className="w-3 h-3 text-accent3" /> .edu Verified
                             </Badge>
                           </div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">
+                          <div className="text-xs text-white/60">
                             {isBike ? '🏍️ Bike Commute' : '🚗 Car Commute'}
                           </div>
                         </div>
@@ -436,10 +435,10 @@ function FindRideContent() {
 
                       {/* Route Match Score Badge */}
                       <div className="text-right">
-                        <div className="px-3 py-1 bg-teal-50 dark:bg-cyan-950/80 text-teal-700 dark:text-cyan-300 border border-teal-300 dark:border-cyan-800 rounded-xl text-xs font-extrabold">
+                        <div className="px-3 py-1 bg-white/10 text-white/80 border border-white/10 rounded-xl text-xs font-extrabold">
                           {matchScore}% Route Match
                         </div>
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        <div className="text-[10px] text-white/40 font-mono mt-0.5">
                           Pickup {pickupDist}m away
                         </div>
                       </div>
@@ -449,32 +448,32 @@ function FindRideContent() {
                     <MatchBar matchScore={matchScore} />
 
                     {/* Route Landmarks */}
-                    <div className="space-y-1 bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-100 dark:border-slate-800 text-xs">
-                      <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                        <Navigation2 className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" />
+                    <div className="space-y-1 bg-white/5 p-3 rounded-xl border border-white/10 text-xs">
+                      <div className="font-bold text-white flex items-center gap-1.5">
+                        <Navigation2 className="w-3.5 h-3.5 text-accent3 flex-shrink-0" />
                         <span>{rideObj.origin_name} ➔ {rideObj.destination_name}</span>
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 pt-1">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      <div className="text-[11px] text-white/60 flex items-center gap-1 pt-1">
+                        <Clock className="w-3.5 h-3.5 text-white/40" />
                         <span>Departure: <strong>{departureFormatted}</strong></span>
                       </div>
                     </div>
 
                     {/* Seats & Request CTA */}
                     <div className="pt-2 flex justify-between items-center">
-                      <span className="text-xs font-bold text-teal-600 dark:text-teal-400">
+                      <span className="text-xs font-bold text-accent3 ">
                         {match.available_seats} Available Passenger Seat(s)
                       </span>
 
                       <Button
                         onClick={() => setSelectedRideForRequest(match)}
-                        variant="teal"
+                        variant="primary"
                         size="sm"
                       >
                         Request Ride Seat
                       </Button>
                     </div>
-                  </Card>
+                  </div>
                 );
               })}
             </div>
@@ -484,7 +483,7 @@ function FindRideContent() {
         {/* RIGHT PANE: Interactive Route Match Map (5 Cols) */}
         <div className={`lg:col-span-5 space-y-4 ${showMobileMap ? 'block' : 'hidden lg:block'}`}>
           <div className="sticky top-20 space-y-3">
-            <h2 className="text-xs font-bold text-[#1e3a8a] dark:text-cyan-300 uppercase tracking-wider">
+            <h2 className="text-xs font-bold text-white uppercase tracking-wider">
               🗺️ 500m Route Proximity Map Preview
             </h2>
 
@@ -511,11 +510,11 @@ function FindRideContent() {
           const pdist = selectedRideForRequest?.pickupDistanceMeters ?? '--';
           return (
           <div className="space-y-4 text-xs">
-            <p className="text-slate-600 dark:text-slate-400">
+            <p className="text-white/60">
               Submit a seat reservation request to driver <strong>{selectedRideForRequest.driver_name}</strong> for this route?
             </p>
 
-            <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2">
+            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-2">
               <div>Driver: <strong>{selectedRideForRequest.driver_name}</strong> (.edu Verified)</div>
               <div>Route: <strong>{rideObj.origin_name} ➔ {rideObj.destination_name}</strong></div>
               <div>Departure: <strong>{formatDepartureTime(rideObj.departure_time)}</strong></div>
@@ -532,7 +531,7 @@ function FindRideContent() {
                 Cancel
               </Button>
               <Button
-                variant="teal"
+                variant="primary"
                 size="sm"
                 onClick={handleConfirmRideRequest}
                 isLoading={requestSubmitting}
@@ -553,11 +552,11 @@ function FindRideContent() {
         title="Create Ride Availability Alert"
       >
         <div className="space-y-4 text-xs">
-          <p className="text-slate-600 dark:text-slate-400">
+          <p className="text-white/60">
             Set an automated alert to be notified as soon as a compatible driver publishes a matching route.
           </p>
 
-          <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2">
+          <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-2">
             <div>Pickup: <strong>{originName}</strong></div>
             <div>Destination: <strong>{destName}</strong></div>
             <div>Target Date: <strong>{searchDate}</strong></div>
@@ -575,7 +574,7 @@ function FindRideContent() {
               Cancel
             </Button>
             <Button
-              variant="teal"
+              variant="primary"
               size="sm"
               onClick={() => {
                 setAlertCreating(true);
@@ -594,18 +593,17 @@ function FindRideContent() {
           </div>
         </div>
       </Modal>
-    </main>
+    </div>
   );
 }
 
 export default function FindRidePage() {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
-      <Navbar />
+    <WorkspaceLayout mode="rider" title="Find Rides" subtitle="Search for available driver routes">
       <Suspense fallback={<div className="p-8 text-center">Loading compatible matches...</div>}>
         <FindRideContent />
       </Suspense>
-      <Footer />
-    </div>
+      
+    </WorkspaceLayout>
   );
 }

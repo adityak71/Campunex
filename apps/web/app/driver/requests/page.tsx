@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -9,6 +8,7 @@ import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Skeleton from '../../../components/ui/Skeleton';
+import WorkspaceLayout from '../../../components/layouts/WorkspaceLayout';
 import EmptyState from '../../../components/ui/EmptyState';
 import Modal from '../../../components/ui/Modal';
 import Map from '../../../components/Map';
@@ -120,25 +120,12 @@ function DriverRequestsContent() {
   });
 
   return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-6 w-full">
-      {/* Header Title */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="space-y-1">
-          <Badge variant="info">DRIVER PASSENGER QUEUE</Badge>
-          <h1 className="text-3xl font-extrabold text-[#1e3a8a] dark:text-cyan-300 tracking-tight mt-1">
-            Manage Ride Requests
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Accepting a passenger request atomically reserves 1 seat and initializes a live WebSocket trip tracking room
-          </p>
-        </div>
-
-        <Link href="/driver">
-          <Button variant="outline" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
-            Back to Dashboard
-          </Button>
-        </Link>
-      </div>
+    <WorkspaceLayout
+      title="Manage Ride Requests"
+      subtitle="Accepting a passenger request atomically reserves 1 seat and initializes a live WebSocket trip tracking room"
+      mode="driver"
+    >
+      <div className="space-y-6">
 
       {/* Error Alert Banner */}
       {error && (
@@ -155,7 +142,7 @@ function DriverRequestsContent() {
 
       {/* Filter Tabs (All, Pending, Accepted, Declined, Expired, Cancelled) */}
       {!error && (
-        <Card className="p-4">
+        <div className="p-4 bg-white/[0.03] border border-white/10 rounded-[22px]">
           <div className="flex flex-wrap gap-2">
             {(['ALL', 'PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED', 'CANCELLED'] as const).map((tab) => (
               <button
@@ -163,15 +150,15 @@ function DriverRequestsContent() {
                 onClick={() => setStatusFilter(tab)}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition border ${
                   statusFilter === tab
-                    ? 'bg-teal-50 dark:bg-cyan-950 text-teal-700 dark:text-cyan-300 border-teal-300 dark:border-cyan-800 shadow-sm'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                    ? 'bg-accent1/20 text-accent1 border-accent1/50 shadow-[0_0_10px_rgba(181,108,255,0.2)]'
+                    : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 {tab}
               </button>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Main Request Grid Hierarchy */}
@@ -186,7 +173,7 @@ function DriverRequestsContent() {
           description="Passenger booking requests submitted for your published routes will appear here in real-time."
           action={
             <Link href="/driver/offer">
-              <Button variant="teal" size="sm">Offer Another Ride</Button>
+              <Button variant="primary" size="sm">Offer Another Ride</Button>
             </Link>
           }
         />
@@ -199,26 +186,25 @@ function DriverRequestsContent() {
               : 'RD';
 
             return (
-              <Card
+              <div
                 key={req.id}
-                hoverable
-                className="p-6 space-y-4 cursor-pointer"
+                className="p-6 space-y-4 cursor-pointer bg-white/[0.03] border border-white/5 hover:border-accent1/30 rounded-[24px] transition-all hover:bg-white/[0.05]"
                 onClick={() => setDetailModalRequest(req)}
               >
                 {/* Rider Header Profile */}
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 flex items-center justify-center font-extrabold text-base shadow-sm">
+                    <div className="w-12 h-12 rounded-2xl bg-accent1/20 text-accent1 flex items-center justify-center font-extrabold text-base shadow-sm">
                       {initials}
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                      <div className="text-sm font-bold text-white flex items-center gap-1.5">
                         {req.rider_name}
                         <Badge variant="verified">
-                          <ShieldCheck className="w-3 h-3 text-teal-600" /> .edu Verified
+                          <ShieldCheck className="w-3 h-3 text-accent2" /> .edu Verified
                         </Badge>
                       </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400">{req.rider_email}</div>
+                      <div className="text-xs text-white/50">{req.rider_email}</div>
                     </div>
                   </div>
 
@@ -238,58 +224,68 @@ function DriverRequestsContent() {
                 </div>
 
                 {/* Route Line Details */}
-                <div className="space-y-1 bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-100 dark:border-slate-800 text-xs">
-                  <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                    <Navigation2 className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" />
+                <div className="space-y-1 bg-white/5 p-3 rounded-xl border border-white/10 text-xs">
+                  <div className="font-bold text-white flex items-center gap-1.5">
+                    <Navigation2 className="w-3.5 h-3.5 text-accent1 flex-shrink-0" />
                     <span>{req.ride_origin || 'Campus Origin'} ➔ {req.ride_dest || 'Campus Destination'}</span>
                   </div>
                 </div>
 
                 {/* Request Metadata */}
-                <div className="grid grid-cols-2 gap-2 text-[11px] bg-[#e0f2fe]/40 dark:bg-cyan-950/30 p-2.5 rounded-xl border border-[#bae6fd] dark:border-cyan-900">
-                  <div>Seats Available: <strong className="text-teal-600 dark:text-teal-400">{req.available_seats ?? '--'}</strong></div>
-                  <div>Request Time: <strong className="text-teal-600 dark:text-teal-400">{formatDepartureTime(req.created_at)}</strong></div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] bg-white/5 p-2.5 rounded-xl border border-white/10">
+                  <div className="text-white/60">
+                    Seats Available: <strong className="text-accent2">{req.available_seats ?? '--'}</strong>
+                  </div>
+                  <div className="text-white/60 whitespace-nowrap">
+                    Request Time: <strong className="text-accent2">{formatDepartureTime(req.created_at)}</strong>
+                  </div>
                 </div>
 
                 {/* Requested Timestamp & Action Buttons */}
                 <div
-                  className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800"
+                  className="flex justify-between items-center pt-2 border-t border-white/10"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <span className="text-[10px] text-slate-400 font-mono">
+                  <span className="text-[10px] text-white/40 font-mono hidden sm:inline-block">
                     Requested: {formatDepartureTime(req.created_at)}
+                  </span>
+                  <span className="text-[10px] text-white/40 font-mono sm:hidden">
+                    {formatDepartureTime(req.created_at)}
                   </span>
 
                   <div className="flex items-center gap-2">
                     {mappedStatus === 'PENDING' ? (
                       <>
                         <Button
-                          variant="teal"
+                          variant="primary"
                           size="sm"
+                          leftIcon={<Check className="w-4 h-4" />}
                           onClick={() => setConfirmModalData({ request: req, action: 'ACCEPTED' })}
                         >
-                          <Check className="w-3.5 h-3.5 mr-1" /> Accept
+                          Accept
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
+                          leftIcon={<X className="w-4 h-4" />}
                           onClick={() => setConfirmModalData({ request: req, action: 'REJECTED' })}
                         >
-                          <X className="w-3.5 h-3.5 mr-1" /> Decline
+                          Decline
                         </Button>
                       </>
                     ) : (
                       <Button
                         variant="ghost"
                         size="sm"
+                        leftIcon={<Eye className="w-4 h-4" />}
                         onClick={() => setDetailModalRequest(req)}
                       >
-                        <Eye className="w-3.5 h-3.5 mr-1" /> View Details
+                        View Details
                       </Button>
                     )}
                   </div>
                 </div>
-              </Card>
+              </div>
             );
           })}
         </div>
@@ -302,15 +298,15 @@ function DriverRequestsContent() {
         title={confirmModalData?.action === 'ACCEPTED' ? 'Accept Rider Booking?' : 'Decline Rider Booking?'}
       >
         <div className="space-y-4 text-xs">
-          <p className="text-slate-600 dark:text-slate-400">
+          <p className="text-white/70">
             {confirmModalData?.action === 'ACCEPTED'
               ? `Accepting ${confirmModalData?.request?.rider_name}'s request will reserve 1 passenger seat and open a live WebSocket tracking room.`
               : `Are you sure you want to decline ${confirmModalData?.request?.rider_name}'s seat request?`}
           </p>
 
-          <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl space-y-1">
-            <div>Rider: <strong>{confirmModalData?.request?.rider_name}</strong></div>
-            <div>Route: <strong>{confirmModalData?.request?.ride_origin} ➔ {confirmModalData?.request?.ride_dest}</strong></div>
+          <div className="p-3 bg-white/5 border border-white/10 text-white/80 rounded-xl space-y-1">
+            <div>Rider: <strong className="text-white">{confirmModalData?.request?.rider_name}</strong></div>
+            <div>Route: <strong className="text-white">{confirmModalData?.request?.ride_origin} ➔ {confirmModalData?.request?.ride_dest}</strong></div>
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -323,7 +319,7 @@ function DriverRequestsContent() {
               Cancel
             </Button>
             <Button
-              variant={confirmModalData?.action === 'ACCEPTED' ? 'teal' : 'danger'}
+              variant={confirmModalData?.action === 'ACCEPTED' ? 'primary' : 'danger'}
               size="sm"
               onClick={handleExecuteAction}
               isLoading={actionLoading}
@@ -353,7 +349,7 @@ function DriverRequestsContent() {
             </div>
 
             <div className="space-y-2">
-              <label className="font-bold text-slate-700 dark:text-slate-300">Rider Route Map</label>
+              <label className="font-bold text-white">Rider Route Map</label>
               <Map
                 origin={{ latitude: parseFloat(detailModalRequest.origin_lat || '31.2536'), longitude: parseFloat(detailModalRequest.origin_lng || '75.7037') }}
                 destination={{ latitude: parseFloat(detailModalRequest.dest_lat || '31.3260'), longitude: parseFloat(detailModalRequest.dest_lng || '75.5762') }}
@@ -361,11 +357,11 @@ function DriverRequestsContent() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl">
-              <div>Status: <strong>{getMappedStatus(detailModalRequest.status)}</strong></div>
-              <div>Seats on Ride: <strong>{detailModalRequest.available_seats ?? '--'} remaining</strong></div>
-              <div>Requested: <strong>{formatDepartureTime(detailModalRequest.created_at)}</strong></div>
-              <div>Departure: <strong>{formatDepartureTime(detailModalRequest.departure_time)}</strong></div>
+            <div className="grid grid-cols-2 gap-2 p-3 bg-white/5 border border-white/10 rounded-xl text-white/70">
+              <div>Status: <strong className="text-white">{getMappedStatus(detailModalRequest.status)}</strong></div>
+              <div>Seats on Ride: <strong className="text-white">{detailModalRequest.available_seats ?? '--'} remaining</strong></div>
+              <div>Requested: <strong className="text-white">{formatDepartureTime(detailModalRequest.created_at)}</strong></div>
+              <div>Departure: <strong className="text-white">{formatDepartureTime(detailModalRequest.departure_time)}</strong></div>
             </div>
 
             <Button
@@ -379,18 +375,15 @@ function DriverRequestsContent() {
           </div>
         )}
       </Modal>
-    </main>
+      </div>
+    </WorkspaceLayout>
   );
 }
 
 export default function DriverRequestsPage() {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
-      <Navbar />
-      <Suspense fallback={<div className="p-8 text-center">Loading driver requests...</div>}>
-        <DriverRequestsContent />
-      </Suspense>
-      <Footer />
-    </div>
+    <Suspense fallback={<div className="p-8 text-center text-white">Loading driver requests...</div>}>
+      <DriverRequestsContent />
+    </Suspense>
   );
 }

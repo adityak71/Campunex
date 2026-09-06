@@ -221,6 +221,12 @@ export async function processCompletionOtpVerification(
     [updatedStatus, tripId]
   );
 
+  // Mark the parent Ride as completed as well, since the driver has reached the destination
+  await pool.query(
+    `UPDATE rides SET status = 'COMPLETED', updated_at = NOW() WHERE id = (SELECT ride_id FROM trips WHERE id = $1);`,
+    [tripId]
+  );
+
   // Fetch rider_id to notify both parties of trip completion
   const riderForCompletion = await pool.query('SELECT rider_id FROM trips WHERE id = $1;', [tripId]);
   const riderIdComp = riderForCompletion.rows[0]?.rider_id;

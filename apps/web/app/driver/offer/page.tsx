@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import WorkspaceLayout from '../../../components/layouts/WorkspaceLayout';
 import Navbar from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
 import LocationPicker from '../../../components/LocationPicker';
@@ -185,95 +186,102 @@ export default function DriverOfferPage() {
   const destPoint = { latitude: parseFloat(destLat), longitude: parseFloat(destLng) };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
-      <Navbar />
-
-      <main className="max-w-3xl mx-auto px-4 py-8 flex-1 w-full space-y-6">
+    <WorkspaceLayout mode="driver" title="Offer a Campus Ride" subtitle="Publish your route with verified 500m route proximity matching">
+      <div className="space-y-8 w-full">
         {/* Header Title */}
         <div className="space-y-1">
-          <Badge variant="info">CAMPUS DRIVER FLOW</Badge>
-          <h1 className="text-3xl font-extrabold text-[#1e3a8a] dark:text-cyan-300 tracking-tight">
+          <Badge variant="info" className="bg-white/5 border border-white/10 text-white/70">CAMPUS DRIVER FLOW</Badge>
+          <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70 tracking-tight">
             Offer a Campus Ride
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-white/50">
             Publish your route with verified 500m route proximity matching
           </p>
         </div>
 
         {/* Wizard Multi-Step Progress Indicator */}
-        <Card className="p-4">
-          <div className="flex items-center justify-between text-xs font-bold">
-            <div className={`flex items-center gap-2 ${currentStep >= 1 ? 'text-teal-600 dark:text-cyan-400' : 'text-slate-400'}`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs text-white ${currentStep >= 1 ? 'bg-teal-600 dark:bg-cyan-600' : 'bg-slate-300'}`}>
+        <Card className="p-4 bg-[#12121e]/80 border-white/10 rounded-full shadow-lg">
+          <div className="flex items-center justify-between text-xs font-bold px-2">
+            <div className={`flex items-center gap-2 ${currentStep >= 1 ? 'text-indigo-400' : 'text-white/40'}`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs text-white ${currentStep >= 1 ? 'bg-gradient-to-br from-indigo-500 to-purple-500 shadow-md' : 'bg-white/10'}`}>
                 1
               </div>
-              <span>Vehicle</span>
+              <span className="hidden sm:inline">Vehicle</span>
             </div>
 
-            <div className={`h-0.5 flex-1 mx-3 ${currentStep >= 2 ? 'bg-teal-500' : 'bg-slate-200 dark:bg-slate-800'}`} />
+            <div className={`h-0.5 flex-1 mx-3 ${currentStep >= 2 ? 'bg-indigo-500/50' : 'bg-white/10'}`} />
 
-            <div className={`flex items-center gap-2 ${currentStep >= 2 ? 'text-teal-600 dark:text-cyan-400' : 'text-slate-400'}`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs text-white ${currentStep >= 2 ? 'bg-teal-600 dark:bg-cyan-600' : 'bg-slate-300'}`}>
+            <div className={`flex items-center gap-2 ${currentStep >= 2 ? 'text-indigo-400' : 'text-white/40'}`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs text-white ${currentStep >= 2 ? 'bg-gradient-to-br from-indigo-500 to-purple-500 shadow-md' : 'bg-white/10'}`}>
                 2
               </div>
-              <span>Route</span>
+              <span className="hidden sm:inline">Route</span>
             </div>
 
-            <div className={`h-0.5 flex-1 mx-3 ${currentStep >= 3 ? 'bg-teal-500' : 'bg-slate-200 dark:bg-slate-800'}`} />
+            <div className={`h-0.5 flex-1 mx-3 ${currentStep >= 3 ? 'bg-indigo-500/50' : 'bg-white/10'}`} />
 
-            <div className={`flex items-center gap-2 ${currentStep >= 3 ? 'text-teal-600 dark:text-cyan-400' : 'text-slate-400'}`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs text-white ${currentStep >= 3 ? 'bg-teal-600 dark:bg-cyan-600' : 'bg-slate-300'}`}>
+            <div className={`flex items-center gap-2 ${currentStep >= 3 ? 'text-indigo-400' : 'text-white/40'}`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs text-white ${currentStep >= 3 ? 'bg-gradient-to-br from-indigo-500 to-purple-500 shadow-md' : 'bg-white/10'}`}>
                 3
               </div>
-              <span>Schedule & Confirm</span>
+              <span className="hidden sm:inline">Schedule & Confirm</span>
             </div>
           </div>
         </Card>
 
         {/* Validation Error Alert Banner */}
         {error && (
-          <div className="p-4 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-2xl text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+          <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-300 text-xs font-bold flex items-center gap-2 backdrop-blur-sm">
+            <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {/* STEP 1 — VEHICLE SELECTION */}
         {currentStep === 1 && (
-          <Card className="space-y-6">
-            <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h2 className="text-sm font-bold text-[#1e3a8a] dark:text-cyan-300 flex items-center gap-2">
-                <Car className="w-4 h-4 text-teal-600 dark:text-cyan-400" /> Step 1: Vehicle Selection & Seats
+          <Card className="space-y-6 bg-[#12121e]/80 border-white/10 rounded-[28px] p-6 sm:p-8">
+            <div className="border-b border-white/10 pb-4">
+              <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
+                <Car className="w-5 h-5 text-indigo-400" /> Step 1: Vehicle Selection & Seats
               </h2>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
+              {/* Car Option */}
               <button
                 type="button"
-                onClick={() => { setVehicleType('CAR'); setTotalSeats(4); }}
-                className={`p-5 rounded-2xl border transition-all text-center space-y-2 ${
+                onClick={() => setVehicleType('CAR')}
+                className={`p-6 rounded-2xl border flex flex-col items-center gap-3 transition-all duration-300 ${
                   vehicleType === 'CAR'
-                    ? 'bg-[#e0f2fe] dark:bg-cyan-950/80 border-teal-500 text-[#1e3a8a] dark:text-cyan-300 shadow-md scale-[1.02]'
-                    : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
+                    ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300 shadow-[0_0_20px_rgba(99,102,241,0.15)] scale-[1.02]'
+                    : 'border-white/10 hover:border-white/20 bg-white/5 text-white/50 hover:bg-white/10'
                 }`}
               >
-                <Car className="w-8 h-8 mx-auto text-teal-600 dark:text-cyan-400" />
-                <div className="text-sm font-bold">🚗 Car Commute</div>
-                <div className="text-[11px] text-slate-500 dark:text-slate-400">1 to 6 Seats Available</div>
+                <Car className="w-8 h-8" />
+                <div className="text-center">
+                  <div className="font-bold">Car Commute</div>
+                  <div className="text-[10px] opacity-80">1 to 6 Seats Available</div>
+                </div>
               </button>
 
+              {/* Bike Option */}
               <button
                 type="button"
-                onClick={() => { setVehicleType('BIKE'); setTotalSeats(1); }}
-                className={`p-5 rounded-2xl border transition-all text-center space-y-2 ${
+                onClick={() => {
+                  setVehicleType('BIKE');
+                  setTotalSeats(1);
+                }}
+                className={`p-6 rounded-2xl border flex flex-col items-center gap-3 transition-all duration-300 ${
                   vehicleType === 'BIKE'
-                    ? 'bg-[#e0f2fe] dark:bg-cyan-950/80 border-teal-500 text-[#1e3a8a] dark:text-cyan-300 shadow-md scale-[1.02]'
-                    : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
+                    ? 'border-purple-500/50 bg-purple-500/20 text-purple-300 shadow-[0_0_20px_rgba(168,85,247,0.15)] scale-[1.02]'
+                    : 'border-white/10 hover:border-white/20 bg-white/5 text-white/50 hover:bg-white/10'
                 }`}
               >
-                <Bike className="w-8 h-8 mx-auto text-teal-600 dark:text-cyan-400" />
-                <div className="text-sm font-bold">🏍️ Bike Ride</div>
-                <div className="text-[11px] text-slate-500 dark:text-slate-400">1 Passenger Seat Max</div>
+                <Bike className="w-8 h-8" />
+                <div className="text-center">
+                  <div className="font-bold">Bike Ride</div>
+                  <div className="text-[10px] opacity-80">1 Passenger Seat Max</div>
+                </div>
               </button>
             </div>
 
@@ -308,7 +316,7 @@ export default function DriverOfferPage() {
             </div>
 
             <div className="space-y-1.5 text-left">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-white/50">
                 Available Passenger Seats ({vehicleType === 'BIKE' ? '1 Max for Bike' : '1 to 6 Seats'})
               </label>
               <input
@@ -317,21 +325,21 @@ export default function DriverOfferPage() {
                 max={vehicleType === 'BIKE' ? 1 : 6}
                 value={totalSeats}
                 onChange={(e) => setTotalSeats(Math.min(vehicleType === 'BIKE' ? 1 : 6, Math.max(1, parseInt(e.target.value, 10) || 1)))}
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 font-bold focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold focus:outline-none focus:border-indigo-500 focus:bg-indigo-500/10 transition-all"
               />
             </div>
 
-            <div className="pt-2 flex justify-end">
+            <div className="pt-4 flex justify-end">
               <Button
                 type="button"
                 onClick={() => {
                   if (validateStep1()) setCurrentStep(2);
                 }}
-                variant="teal"
+                className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-full shadow-lg hover:shadow-indigo-500/25 px-8"
                 size="md"
                 rightIcon={<ArrowRight className="w-4 h-4" />}
               >
-                Continue to Step 2: Route
+                Continue to Route
               </Button>
             </div>
           </Card>
@@ -339,19 +347,19 @@ export default function DriverOfferPage() {
 
         {/* STEP 2 — ROUTE SELECTION */}
         {currentStep === 2 && (
-          <Card className="space-y-6">
-            <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h2 className="text-sm font-bold text-[#1e3a8a] dark:text-cyan-300 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-teal-600 dark:text-cyan-400" /> Step 2: Route Autocomplete & Service Area
+          <Card className="space-y-6 bg-[#12121e]/80 border-white/10 rounded-[28px] p-6 sm:p-8">
+            <div className="border-b border-white/10 pb-4">
+              <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-indigo-400" /> Step 2: Route Autocomplete & Service Area
               </h2>
             </div>
 
             {/* University Service Region Notice */}
-            <div className="p-3.5 bg-[#e0f2fe]/60 dark:bg-cyan-950/40 border border-[#bae6fd] dark:border-cyan-800 rounded-2xl text-xs space-y-1">
-              <div className="font-bold text-[#1e3a8a] dark:text-cyan-300 flex items-center gap-1.5">
-                <Globe className="w-4 h-4 text-teal-600 dark:text-cyan-400" /> Allowed University Service Boundary (LPU / Punjab Region)
+            <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-xs space-y-1 backdrop-blur-sm">
+              <div className="font-bold text-indigo-300 flex items-center gap-1.5">
+                <Globe className="w-4 h-4 text-indigo-400" /> Allowed University Service Boundary (LPU / Punjab Region)
               </div>
-              <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
+              <p className="text-white/60 text-[11px] leading-relaxed">
                 Locations outside the university service region are not supported. All pickup and dropoff points must fall within official campus commute boundaries.
               </p>
             </div>
@@ -386,15 +394,15 @@ export default function DriverOfferPage() {
             </div>
 
             {/* Map Selection Option (Method B) */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+            <div className="p-4 bg-white/5 border border-white/10 rounded-2xl space-y-3">
               <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-800 dark:text-slate-200">Interactive Map Location Selection</span>
+                <span className="font-bold text-white/80">Interactive Map Location Selection</span>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setShowMapPickerModal(true)}
-                  leftIcon={<MapPin className="w-3.5 h-3.5 text-teal-500" />}
+                  leftIcon={<MapPin className="w-3.5 h-3.5 text-indigo-400" />}
                 >
                   Expand Interactive Map
                 </Button>
@@ -402,26 +410,27 @@ export default function DriverOfferPage() {
               <Map origin={originPoint} destination={destPoint} height="240px" />
             </div>
 
-            <div className="pt-2 flex justify-between">
+            <div className="pt-4 flex justify-between">
               <Button
                 type="button"
                 variant="outline"
                 size="md"
                 onClick={() => setCurrentStep(1)}
                 leftIcon={<ArrowLeft className="w-4 h-4" />}
+                className="hover:bg-white/5"
               >
                 Back to Vehicle
               </Button>
               <Button
                 type="button"
-                variant="teal"
-                size="md"
                 onClick={() => {
                   if (validateStep2()) setCurrentStep(3);
                 }}
+                className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-full shadow-lg hover:shadow-indigo-500/25 px-8"
+                size="md"
                 rightIcon={<ArrowRight className="w-4 h-4" />}
               >
-                Continue to Step 3: Schedule
+                Continue to Schedule
               </Button>
             </div>
           </Card>
@@ -430,72 +439,74 @@ export default function DriverOfferPage() {
         {/* STEP 3 — SCHEDULE & CONFIRMATION SUMMARY */}
         {currentStep === 3 && (
           <form onSubmit={handlePublishRide} className="space-y-6">
-            <Card className="space-y-6">
-              <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-                <h2 className="text-sm font-bold text-[#1e3a8a] dark:text-cyan-300 flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-teal-600 dark:text-cyan-400" /> Step 3: Schedule & Route Summary Review
+            <Card className="space-y-6 bg-[#12121e]/80 border-white/10 rounded-[28px] p-6 sm:p-8">
+              <div className="border-b border-white/10 pb-4">
+                <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-indigo-400" /> Step 3: Schedule & Route Summary Review
                 </h2>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1 text-left">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Departure Date</label>
+                  <label className="text-xs font-bold text-white/50">Departure Date</label>
                   <input
                     type="date"
                     required
                     value={departureDate}
                     onChange={(e) => setDepartureDate(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-400"
+                    style={{ colorScheme: 'dark' }}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold focus:outline-none focus:border-indigo-500 focus:bg-indigo-500/10 transition-all [color-scheme:dark]"
                   />
                 </div>
 
                 <div className="space-y-1 text-left">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Departure Time</label>
+                  <label className="text-xs font-bold text-white/50">Departure Time</label>
                   <input
                     type="time"
                     required
                     value={departureTime}
                     onChange={(e) => setDepartureTime(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-400"
+                    style={{ colorScheme: 'dark' }}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold focus:outline-none focus:border-indigo-500 focus:bg-indigo-500/10 transition-all [color-scheme:dark]"
                   />
                 </div>
               </div>
 
               {/* Final Summary Card Before Publishing */}
-              <div className="p-5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4">
-                <h3 className="text-xs font-extrabold text-[#1e3a8a] dark:text-cyan-300 uppercase tracking-wider">
+              <div className="p-5 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl space-y-4">
+                <h3 className="text-xs font-black text-indigo-300 uppercase tracking-wider">
                   📋 Ride Offer Summary Review
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   <div className="space-y-1">
-                    <span className="text-slate-500 dark:text-slate-400">Vehicle Info:</span>
-                    <div className="font-bold text-slate-900 dark:text-slate-100">
+                    <span className="text-white/40">Vehicle Info:</span>
+                    <div className="font-bold text-white">
                       {vehicleType === 'CAR' ? '🚗 Car' : '🏍️ Bike'} • {vehicleMake} {vehicleModel} ({vehicleColor})
                     </div>
-                    <div className="font-mono text-[11px] text-slate-500">Reg: {vehicleRegistration}</div>
+                    <div className="font-mono text-[11px] text-white/40">Reg: {vehicleRegistration}</div>
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-slate-500 dark:text-slate-400">Seat Capacity:</span>
-                    <div className="font-bold text-teal-600 dark:text-cyan-400">
+                    <span className="text-white/40">Seat Capacity:</span>
+                    <div className="font-bold text-indigo-400">
                       {totalSeats} Available Passenger Seat(s)
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-slate-500 dark:text-slate-400">Pickup Origin:</span>
-                    <div className="font-bold text-slate-900 dark:text-slate-100">{originName}</div>
+                    <span className="text-white/40">Pickup Origin:</span>
+                    <div className="font-bold text-white">{originName}</div>
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-slate-500 dark:text-slate-400">Drop Destination:</span>
-                    <div className="font-bold text-slate-900 dark:text-slate-100">{destName}</div>
+                    <span className="text-white/40">Drop Destination:</span>
+                    <div className="font-bold text-white">{destName}</div>
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-slate-500 dark:text-slate-400">Schedule:</span>
-                    <div className="font-bold text-slate-900 dark:text-slate-100">
+                    <span className="text-white/40">Schedule:</span>
+                    <div className="font-bold text-white">
                       {new Date(`${departureDate}T${departureTime}`).toLocaleString()}
                     </div>
                   </div>
@@ -504,22 +515,23 @@ export default function DriverOfferPage() {
                 <Map origin={originPoint} destination={destPoint} height="200px" />
               </div>
 
-              <div className="pt-2 flex justify-between">
+              <div className="pt-4 flex justify-between">
                 <Button
                   type="button"
                   variant="outline"
                   size="md"
                   onClick={() => setCurrentStep(2)}
                   leftIcon={<ArrowLeft className="w-4 h-4" />}
+                  className="hover:bg-white/5 border-white/10 text-white/70"
                 >
                   Back to Route
                 </Button>
                 <Button
                   type="submit"
-                  variant="teal"
+                  className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white rounded-full shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] px-8 font-bold tracking-wide transition-all duration-300"
                   size="lg"
                   isLoading={loading}
-                  rightIcon={<Check className="w-4 h-4" />}
+                  rightIcon={<Check className="w-5 h-5 text-indigo-100" />}
                 >
                   Publish Ride
                 </Button>
@@ -539,10 +551,10 @@ export default function DriverOfferPage() {
               <button
                 type="button"
                 onClick={() => setActivePickerTarget('PICKUP')}
-                className={`flex-1 py-2 px-3 rounded-xl border text-xs font-bold transition ${
+                className={`flex-1 py-3 px-4 rounded-xl border text-xs font-bold transition ${
                   activePickerTarget === 'PICKUP'
-                    ? 'bg-teal-50 dark:bg-cyan-950 border-teal-500 text-teal-700 dark:text-cyan-300'
-                    : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600'
+                    ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
+                    : 'bg-white/5 border-white/10 text-white/50'
                 }`}
               >
                 📍 Pickup Target
@@ -550,10 +562,10 @@ export default function DriverOfferPage() {
               <button
                 type="button"
                 onClick={() => setActivePickerTarget('DROP')}
-                className={`flex-1 py-2 px-3 rounded-xl border text-xs font-bold transition ${
+                className={`flex-1 py-3 px-4 rounded-xl border text-xs font-bold transition ${
                   activePickerTarget === 'DROP'
-                    ? 'bg-teal-50 dark:bg-cyan-950 border-teal-500 text-teal-700 dark:text-cyan-300'
-                    : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600'
+                    ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
+                    : 'bg-white/5 border-white/10 text-white/50'
                 }`}
               >
                 🎯 Drop Target
@@ -562,15 +574,14 @@ export default function DriverOfferPage() {
 
             <Map origin={originPoint} destination={destPoint} height="300px" />
 
-            <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl space-y-1">
-              <div>Pickup Coordinates: <strong>{originLat}, {originLng}</strong></div>
-              <div>Destination Coordinates: <strong>{destLat}, {destLng}</strong></div>
+            <div className="p-4 bg-white/5 rounded-xl space-y-1">
+              <div className="text-white/70">Pickup Coordinates: <strong className="text-white">{originLat}, {originLng}</strong></div>
+              <div className="text-white/70">Destination Coordinates: <strong className="text-white">{destLat}, {destLng}</strong></div>
             </div>
 
             <Button
-              variant="teal"
-              size="sm"
-              className="w-full"
+              className="bg-indigo-500 hover:bg-indigo-600 text-white w-full rounded-xl"
+              size="md"
               onClick={() => setShowMapPickerModal(false)}
             >
               Confirm Location on Map
@@ -584,29 +595,28 @@ export default function DriverOfferPage() {
           onClose={() => router.push('/driver')}
           title="🎉 Ride Published Successfully!"
         >
-          <div className="space-y-4 text-xs text-center py-2">
-            <div className="w-12 h-12 bg-teal-50 dark:bg-teal-950/80 text-teal-600 dark:text-teal-400 rounded-full flex items-center justify-center mx-auto shadow-md">
-              <CheckCircle2 className="w-6 h-6" />
+          <div className="space-y-4 text-xs text-center py-4">
+            <div className="w-16 h-16 bg-emerald-500/20 border border-emerald-500/50 text-emerald-400 rounded-full flex items-center justify-center mx-auto shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+              <CheckCircle2 className="w-8 h-8" />
             </div>
 
-            <p className="text-slate-600 dark:text-slate-400 max-w-xs mx-auto">
-              Your ride offer from <strong>{originName}</strong> to <strong>{destName}</strong> has been published and is now visible on the 500m proximity matching engine.
+            <p className="text-white/60 max-w-xs mx-auto text-sm leading-relaxed">
+              Your ride offer from <strong className="text-white">{originName}</strong> to <strong className="text-white">{destName}</strong> has been published and is now visible on the proximity matching engine.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Button
                 variant="outline"
-                size="sm"
-                className="flex-1"
+                size="md"
+                className="flex-1 hover:bg-white/5"
                 onClick={() => router.push('/driver')}
               >
                 Back to Dashboard
               </Button>
 
               <Button
-                variant="teal"
-                size="sm"
-                className="flex-1"
+                className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg"
+                size="md"
                 onClick={() => router.push(`/driver/requests?rideId=${publishedRideId}`)}
               >
                 View Ride Requests
@@ -614,9 +624,7 @@ export default function DriverOfferPage() {
             </div>
           </div>
         </Modal>
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </WorkspaceLayout>
   );
 }

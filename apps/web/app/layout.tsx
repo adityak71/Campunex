@@ -1,12 +1,11 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { ThemeProvider } from '../components/ThemeProvider';
 import { ToastProvider } from '../components/ui/Toast';
 import AuthGuard from '../components/AuthGuard';
 
 export const metadata: Metadata = {
   title: 'Campunex — Campus Ride-Matching Platform',
-  description: 'Geospatial campus ride-sharing and ride-matching platform with live driver tracking and dual OTP security.',
+  description: 'Your campus. Your route. Your ride. Geospatial campus ride-sharing and ride-matching platform.',
 };
 
 export default function RootLayout({
@@ -15,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="dark">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -24,12 +23,10 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="antialiased font-sans bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 transition-colors duration-200">
-        <ThemeProvider>
-          <ToastProvider>
-            <AuthGuard>{children}</AuthGuard>
-          </ToastProvider>
-        </ThemeProvider>
+      <body className="antialiased font-sans transition-colors duration-200">
+        <ToastProvider>
+          <AuthGuard>{children}</AuthGuard>
+        </ToastProvider>
       </body>
     </html>
   );

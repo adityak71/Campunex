@@ -6,7 +6,7 @@ export default function MatchBar({ matchScore }: { matchScore: number }) {
   const percentage = Math.min(100, Math.max(0, matchScore));
 
   const getColor = (score: number) => {
-    if (score >= 80) return 'bg-teal-500 text-teal-700 dark:text-teal-400';
+    if (score >= 80) return 'bg-accent3 text-accent3 dark:text-accent3';
     if (score >= 60) return 'bg-blue-500 text-blue-700 dark:text-blue-400';
     return 'bg-amber-500 text-amber-700 dark:text-amber-400';
   };
@@ -20,7 +20,7 @@ export default function MatchBar({ matchScore }: { matchScore: number }) {
       <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
         <div
           className={`h-full transition-all duration-500 rounded-full ${
-            percentage >= 80 ? 'bg-teal-500' : percentage >= 60 ? 'bg-blue-500' : 'bg-amber-500'
+            percentage >= 80 ? 'bg-accent3' : percentage >= 60 ? 'bg-blue-500' : 'bg-amber-500'
           }`}
           style={{ width: `${percentage}%` }}
         />

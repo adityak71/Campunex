@@ -89,15 +89,15 @@ export default function NotificationCenter() {
   const getIcon = (category: Notification['category']) => {
     switch (category) {
       case 'RIDE':
-        return <Car className="w-5 h-5 text-teal-500" />;
+        return <Car className="w-5 h-5 text-accent3" />;
       case 'TRIP':
         return <Navigation2 className="w-5 h-5 text-emerald-500" />;
       case 'SAFETY':
         return <ShieldAlert className="w-5 h-5 text-rose-500" />;
       case 'ACCOUNT':
-        return <ShieldCheck className="w-5 h-5 text-teal-600" />;
+        return <ShieldCheck className="w-5 h-5 text-accent3" />;
       case 'REQUEST':
-        return <UserCheck className="w-5 h-5 text-teal-600 dark:text-cyan-400" />;
+        return <UserCheck className="w-5 h-5 text-accent3 text-accent3" />;
       case 'SYSTEM':
       case 'ADMIN':
         return <Settings className="w-5 h-5 text-slate-500" />;
@@ -153,11 +153,11 @@ export default function NotificationCenter() {
                   <div
                     key={notif.id}
                     className={`p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50 relative group ${
-                      !notif.is_read ? 'bg-teal-50/30 dark:bg-slate-800/80' : 'bg-transparent'
+                      !notif.is_read ? 'bg-white/5 bg-white/5' : 'bg-transparent'
                     }`}
                   >
                     {!notif.is_read && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-teal-500 dark:bg-cyan-500" />
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent3 bg-accent3" />
                     )}
                     <div className="flex gap-3">
                       <div className="flex-shrink-0 mt-1">{getIcon(notif.category)}</div>
@@ -183,7 +183,7 @@ export default function NotificationCenter() {
                           
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {!notif.is_read && (
-                              <button onClick={(e) => markAsRead(notif.id, e)} className="p-1.5 text-teal-600 dark:text-cyan-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 rounded" title="Mark as read">
+                              <button onClick={(e) => markAsRead(notif.id, e)} className="p-1.5 text-accent3 text-accent3 hover:bg-white/10 hover:bg-white/10 rounded" title="Mark as read">
                                 <Check className="w-3.5 h-3.5" />
                               </button>
                             )}
@@ -212,7 +212,7 @@ export default function NotificationCenter() {
             <Link
               href={'/notifications'}
               onClick={() => setIsOpen(false)}
-              className="flex justify-center items-center gap-1 w-full py-2 text-sm font-semibold text-teal-600 dark:text-cyan-400 hover:text-teal-700 dark:hover:text-cyan-300 transition"
+              className="flex justify-center items-center gap-1 w-full py-2 text-sm font-semibold text-accent3 text-accent3 hover:text-accent3 dark:hover:text-cyan-300 transition"
             >
               View all notifications <ChevronRight className="w-4 h-4" />
             </Link>

@@ -291,10 +291,12 @@ export async function getAllDriverRideRequests(driverId: string, rideId?: string
       ST_X(r.destination_geom::geometry) AS dest_lng,
       r.departure_time,
       r.total_seats,
-      r.available_seats
+      r.available_seats,
+      t.id AS trip_id
     FROM ride_requests req
     JOIN rides r ON req.ride_id = r.id
     JOIN users u ON req.rider_id = u.id
+    LEFT JOIN trips t ON t.ride_request_id = req.id
     WHERE r.driver_id = $1
   `;
 

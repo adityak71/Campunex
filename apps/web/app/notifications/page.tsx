@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
+import WorkspaceLayout from '../../components/layouts/WorkspaceLayout';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -114,16 +113,16 @@ export default function NotificationsPage() {
     switch (category) {
       case 'RIDE':
       case 'REQUEST':
-        return <Car className="w-5 h-5 text-teal-600 dark:text-cyan-400" />;
+        return <Car className="w-5 h-5 text-accent3 " />;
       case 'TRIP':
         return <Navigation2 className="w-5 h-5 text-emerald-500" />;
       case 'SAFETY':
         return <ShieldAlert className="w-5 h-5 text-rose-500" />;
       case 'ACCOUNT':
-        return <ShieldCheck className="w-5 h-5 text-teal-600" />;
+        return <ShieldCheck className="w-5 h-5 text-accent3" />;
       case 'SYSTEM':
       case 'ADMIN':
-        return <Settings className="w-5 h-5 text-slate-500" />;
+        return <Settings className="w-5 h-5 text-white/50" />;
       default:
         return <Info className="w-5 h-5 text-blue-500" />;
     }
@@ -138,18 +137,16 @@ export default function NotificationsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
-      <Navbar />
-
-      <main className="flex-grow pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto w-full">
+    <WorkspaceLayout mode="rider" title="Notifications" subtitle="Alerts and updates for your account">
+      <div className="space-y-6 w-full">
         {/* Header section */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">
-              <Bell className="w-8 h-8 text-teal-600 dark:text-cyan-400" />
+              <Bell className="w-8 h-8 text-accent3 " />
               Notification Center
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-2 text-sm sm:text-base max-w-xl">
+            <p className="text-white/60 mt-2 text-sm sm:text-base max-w-xl">
               Stay updated on your rides, security alerts, and system announcements.
             </p>
           </div>
@@ -162,15 +159,15 @@ export default function NotificationsPage() {
         </div>
 
         {/* Tabs */}
-        <div className="bg-white dark:bg-slate-800 p-1.5 rounded-xl flex flex-wrap gap-1 mb-6 shadow-sm border border-slate-200 dark:border-slate-700">
+        <div className="bg-white /5 p-1.5 rounded-xl flex flex-wrap gap-1 mb-6 shadow-sm border border-white/10">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setFilterTab(tab.id as any)}
               className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
                 filterTab === tab.id
-                  ? 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-cyan-400 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                  ? 'bg-white/5 text-accent3 shadow-sm'
+                  : 'text-white/60 hover:bg-white/5 :bg-white/5/50'
               }`}
             >
               {tab.label}
@@ -182,7 +179,7 @@ export default function NotificationsPage() {
         <div className="space-y-4">
           {loading ? (
             Array(4).fill(0).map((_, i) => (
-              <Card key={i} className="p-4">
+              <div  key={i} className="bg-white/5 border border-white/10 rounded-[22px] p-4">
                 <div className="flex items-start gap-4">
                   <Skeleton className="w-10 h-10 rounded-full" />
                   <div className="space-y-2 flex-1">
@@ -190,7 +187,7 @@ export default function NotificationsPage() {
                     <Skeleton className="h-4 w-3/4" />
                   </div>
                 </div>
-              </Card>
+              </div>
             ))
           ) : filteredNotifications.length === 0 ? (
             <EmptyState
@@ -200,36 +197,36 @@ export default function NotificationsPage() {
             />
           ) : (
             filteredNotifications.map((notif) => (
-              <Card
+              <div
                 key={notif.id}
-                className={`overflow-hidden transition-all duration-300 ${
+                className={`bg-white/5 border border-white/10 rounded-[22px] p-4 overflow-hidden transition-all duration-300 ${
                   !notif.is_read
-                    ? 'border-l-4 border-l-teal-500 dark:border-l-cyan-500 bg-white dark:bg-slate-800 shadow-md'
-                    : 'border-l-4 border-l-transparent bg-slate-50 dark:bg-slate-900/50 opacity-75 hover:opacity-100'
+                    ? 'border-l-4 border-l-primary shadow-md'
+                    : 'border-l-4 border-l-transparent opacity-75 hover:opacity-100'
                 }`}
               >
                 <div className="p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                  <div className="flex-shrink-0 p-3 rounded-full bg-slate-100 dark:bg-slate-800">
+                  <div className="flex-shrink-0 p-3 rounded-full bg-white/5">
                     {getCategoryIcon(notif.category)}
                   </div>
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <h3 className={`text-base font-bold truncate ${!notif.is_read ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'}`}>
+                      <h3 className={`text-base font-bold truncate ${!notif.is_read ? 'text-white/60 ' : 'text-white/60 /70'}`}>
                         {notif.title}
                       </h3>
                       {getPriorityBadge(notif.priority)}
                     </div>
-                    <p className={`text-sm mb-2 ${!notif.is_read ? 'text-slate-700 dark:text-slate-300' : 'text-slate-500 dark:text-slate-400'}`}>
+                    <p className={`text-sm mb-2 ${!notif.is_read ? 'text-white/60 /70' : 'text-white/60'}`}>
                       {notif.message}
                     </p>
-                    <div className="flex items-center text-xs text-slate-500 dark:text-slate-500 font-medium">
+                    <div className="flex items-center text-xs text-white/50 /50 font-medium">
                       <Clock className="w-3.5 h-3.5 mr-1" />
                       {new Date(notif.created_at).toLocaleString()}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 w-full sm:w-auto mt-4 sm:mt-0 pt-4 sm:pt-0 border-t border-slate-100 dark:border-slate-800 sm:border-0 justify-end">
+                  <div className="flex items-center gap-2 w-full sm:w-auto mt-4 sm:mt-0 pt-4 sm:pt-0 border-t border-white/10 sm:border-0 justify-end">
                     {notif.action_url && notif.action_type && (
                       <Link href={notif.action_url} className="w-full sm:w-auto">
                         <Button variant={notif.priority === 'HIGH' || notif.priority === 'CRITICAL' ? 'primary' : 'outline'} size="sm" className="w-full">
@@ -241,7 +238,7 @@ export default function NotificationsPage() {
                     {!notif.is_read && (
                       <button
                         onClick={(e) => markAsRead(notif.id, e)}
-                        className="p-2 text-slate-400 hover:text-teal-600 dark:hover:text-cyan-400 transition-colors tooltip-trigger"
+                        className="p-2 text-white/40 hover:text-accent3 :text-accent3 transition-colors tooltip-trigger"
                         title="Mark as read"
                       >
                         <Check className="w-5 h-5" />
@@ -250,20 +247,18 @@ export default function NotificationsPage() {
                     
                     <button
                       onClick={(e) => deleteNotification(notif.id, e)}
-                      className="p-2 text-slate-400 hover:text-rose-500 transition-colors tooltip-trigger"
+                      className="p-2 text-white/40 hover:text-rose-500 transition-colors tooltip-trigger"
                       title="Dismiss"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
-              </Card>
+              </div>
             ))
           )}
         </div>
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </WorkspaceLayout>
   );
 }

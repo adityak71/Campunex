@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import WorkspaceLayout from '../../../components/layouts/WorkspaceLayout';
 import Navbar from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
 import Button from '../../../components/ui/Button';
@@ -58,14 +59,12 @@ export default function DriverProfilePage() {
 
   if (loading || !user) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans">
-        <Navbar />
-        <main className="max-w-4xl mx-auto px-4 py-8 flex-1 space-y-6 w-full">
+    <WorkspaceLayout mode="driver" title="Driver Profile" subtitle="Manage your driver verification and preferences">
+      <div className="space-y-8 w-full">
           <Skeleton className="h-44 w-full" />
           <Skeleton className="h-64 w-full" />
-        </main>
-        <Footer />
-      </div>
+        </div>
+    </WorkspaceLayout>
     );
   }
 
@@ -77,35 +76,24 @@ export default function DriverProfilePage() {
     .toUpperCase();
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
-      <Navbar />
-
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-6 w-full">
-        <div className="space-y-1">
-          <Badge variant="info">DRIVER ACCOUNT & PREFERENCES</Badge>
-          <h1 className="text-3xl font-extrabold text-[#1e3a8a] dark:text-cyan-300 tracking-tight">
-            Driver Profile Settings
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Manage your verified institutional identity, vehicle registration, notifications, and security controls
-          </p>
-        </div>
+    <WorkspaceLayout mode="driver" title="Driver Profile Settings" subtitle="Manage your verified institutional identity, vehicle registration, notifications, and security controls">
+      <div className="space-y-6">
 
         {/* Header Profile Summary */}
-        <Card className="p-6 md:p-8 space-y-6">
-          <div className="flex flex-col md:flex-row items-center gap-6 border-b border-slate-100 dark:border-slate-800 pb-6">
-            <div className="w-20 h-20 rounded-full bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 flex items-center justify-center font-extrabold text-2xl shadow-sm border-2 border-teal-500">
+        <div className="p-6 md:p-8 space-y-6 bg-white/[0.03] border border-white/10 rounded-[22px]">
+          <div className="flex flex-col md:flex-row items-center gap-6 border-b border-white/10 pb-6">
+            <div className="w-20 h-20 rounded-full bg-white/10 text-white flex items-center justify-center font-extrabold text-2xl shadow-sm border border-white/20">
               {initials}
             </div>
 
             <div className="text-center md:text-left space-y-1">
               <div className="flex items-center justify-center md:justify-start gap-2">
-                <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{user.name}</h2>
+                <h2 className="text-2xl font-extrabold text-white">{user.name}</h2>
                 <Badge variant="verified">
-                  <ShieldCheck className="w-3.5 h-3.5 text-teal-600" /> .edu Verified Driver
+                  <ShieldCheck className="w-3.5 h-3.5 text-accent3" /> .edu Verified Driver
                 </Badge>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center md:justify-start gap-1">
+              <p className="text-xs text-white/50 flex items-center justify-center md:justify-start gap-1">
                 <Mail className="w-3.5 h-3.5" /> {user.email}
               </p>
             </div>
@@ -113,41 +101,41 @@ export default function DriverProfilePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Vehicle Details */}
-            <div className="bg-slate-50 dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3">
-              <h3 className="text-xs font-bold text-[#1e3a8a] dark:text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Car className="w-4 h-4 text-teal-500" /> Registered Vehicle
+            <div className="bg-white/5 p-5 rounded-[18px] border border-white/10 space-y-3">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Car className="w-4 h-4 text-accent2" /> Registered Vehicle
               </h3>
 
-              <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+              <div className="space-y-1.5 text-xs text-white/60">
                 <div className="flex justify-between">
                   <span>Vehicle Make & Model:</span>
-                  <strong className="text-slate-900 dark:text-slate-100">Honda Civic (Silver)</strong>
+                  <strong className="text-white">Honda Civic (Silver)</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Registration Number:</span>
-                  <strong className="font-mono text-slate-900 dark:text-slate-100">PB-08-AB-1234</strong>
+                  <strong className="font-mono text-white">PB-08-AB-1234</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Passenger Seat Capacity:</span>
-                  <strong className="text-teal-600 dark:text-teal-400">4 Seats</strong>
+                  <strong className="text-accent2">4 Seats</strong>
                 </div>
               </div>
             </div>
 
             {/* Institutional Verification */}
-            <div className="bg-slate-50 dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3">
-              <h3 className="text-xs font-bold text-[#1e3a8a] dark:text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-teal-500" /> Campus Credentials
+            <div className="bg-white/5 p-5 rounded-[18px] border border-white/10 space-y-3">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-accent2" /> Campus Credentials
               </h3>
 
-              <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+              <div className="space-y-1.5 text-xs text-white/60">
                 <div className="flex justify-between">
                   <span>University Domain:</span>
-                  <strong className="font-mono text-slate-900 dark:text-slate-100">{user.email.split('@')[1] || 'lpu.in'}</strong>
+                  <strong className="font-mono text-white">{user.email.split('@')[1] || 'lpu.in'}</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Institutional Status:</span>
-                  <strong className="text-teal-600 font-bold">Active Campus Member</strong>
+                  <strong className="text-accent3 font-bold">Active Campus Member</strong>
                 </div>
               </div>
             </div>
@@ -155,9 +143,9 @@ export default function DriverProfilePage() {
 
           {/* Preferences & Toggles */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-            <div className="p-5 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3 text-xs">
-              <h3 className="font-bold text-[#1e3a8a] dark:text-cyan-300 flex items-center gap-1.5">
-                <Bell className="w-4 h-4 text-teal-500" /> Notification Preferences
+            <div className="p-5 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-white/10 space-y-3 text-xs">
+              <h3 className="font-bold text-white flex items-center gap-1.5">
+                <Bell className="w-4 h-4 text-accent2" /> Notification Preferences
               </h3>
 
               <div className="space-y-2">
@@ -183,9 +171,9 @@ export default function DriverProfilePage() {
               </div>
             </div>
 
-            <div className="p-5 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3 text-xs">
-              <h3 className="font-bold text-[#1e3a8a] dark:text-cyan-300 flex items-center gap-1.5">
-                <Eye className="w-4 h-4 text-teal-500" /> Privacy & Location Controls
+            <div className="p-5 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-white/10 space-y-3 text-xs">
+              <h3 className="font-bold text-white flex items-center gap-1.5">
+                <Eye className="w-4 h-4 text-accent2" /> Privacy & Location Controls
               </h3>
 
               <label className="flex items-center justify-between cursor-pointer">
@@ -200,7 +188,7 @@ export default function DriverProfilePage() {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+          <div className="pt-4 border-t border-white/10 flex justify-end">
             <Button
               onClick={handleLogout}
               variant="danger"
@@ -210,10 +198,8 @@ export default function DriverProfilePage() {
               Sign Out of Account
             </Button>
           </div>
-        </Card>
-      </main>
-
-      <Footer />
-    </div>
+        </div>
+      </div>
+    </WorkspaceLayout>
   );
 }

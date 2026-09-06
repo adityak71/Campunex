@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import WorkspaceLayout from '../../../components/layouts/WorkspaceLayout';
 import Navbar from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
 import Button from '../../../components/ui/Button';
@@ -98,10 +99,8 @@ export default function DriverRidesPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
-      <Navbar />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-6 w-full">
+    <WorkspaceLayout mode="driver" title="Active Rides" subtitle="Manage your current and upcoming scheduled routes">
+      <div className="space-y-8 w-full">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="space-y-1">
@@ -221,9 +220,7 @@ export default function DriverRidesPage() {
             })}
           </div>
         )}
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </WorkspaceLayout>
   );
 }

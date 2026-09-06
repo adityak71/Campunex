@@ -156,11 +156,6 @@ export async function runMigrations(): Promise<void> {
         CHECK (status IN ('SCHEDULED', 'OPEN', 'ACTIVE', 'CANCELLED', 'COMPLETED', 'EXPIRED'));
     `);
 
-    // Fix notifications user_id to be nullable for broadcast system notifications
-    await client.query(`
-      ALTER TABLE notifications ALTER COLUMN user_id DROP NOT NULL;
-    `).catch(() => { /* already nullable - ignore */ });
-
     await client.query('COMMIT');
     console.log('✅ Database migrations applied successfully!');
   } catch (err) {

@@ -294,9 +294,18 @@ export default function DriverRideDetailsPage() {
                         </Button>
                       </>
                     ) : (
-                      <Badge variant={req.status === 'ACCEPTED' ? 'success' : 'danger'}>
-                        {req.status}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={req.status === 'ACCEPTED' ? 'success' : 'danger'}>
+                          {req.status}
+                        </Badge>
+                        {req.status === 'ACCEPTED' && req.trip_id && (
+                          <Link href={`/trip/${req.trip_id}`}>
+                            <Button variant="teal" size="sm">
+                              Go to Trip
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
                     )}
                   </div>
                 </Card>

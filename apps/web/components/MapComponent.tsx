@@ -16,6 +16,7 @@ interface MapProps {
   pickupDistanceMeters?: number;
   zoom?: number;
   height?: string;
+  onLocationSelect?: (lat: number, lng: number) => void;
 }
 
 export default function Map({
@@ -29,6 +30,7 @@ export default function Map({
   pickupDistanceMeters,
   zoom = 13,
   height = '400px',
+  onLocationSelect,
 }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<any>(null);
@@ -73,45 +75,78 @@ export default function Map({
 
     const map = leafletMap.current;
 
-    // 1. Driver Origin Marker (Green Pin)
-    if (origin) {
-      L.circleMarker([origin.latitude, origin.longitude], {
-        color: '#0d9488',
-        fillColor: '#14b8a6',
-        radius: 9,
-        fillOpacity: 0.9,
-        weight: 2,
-      })
-        .addTo(map)
-        .bindPopup('<b>🚘 Driver Origin</b><br/>' + (origin.latitude.toFixed(4) + ', ' + origin.longitude.toFixed(4)));
+    // Handle map clicks for coordinate selection
+    if (onLocationSelect) {
+      map.off('click'); // Remove any previous listeners to avoid duplicates
+      map.on('click', (e: any) => {
+        onLocationSelect(e.latlng.lat, e.latlng.lng);
+      });
+      // Change cursor to crosshair if map is clickable
+      if (mapRef.current) {
+        mapRef.current.style.cursor = 'crosshair';
+      }
     }
 
-    // 2. Driver Destination Marker (Red Pin)
+    // Refs for marker instances to prevent duplicates
+    if (!leafletMap.current.originMarkerRef) leafletMap.current.originMarkerRef = null;
+    if (!leafletMap.current.destMarkerRef) leafletMap.current.destMarkerRef = null;
+    if (!leafletMap.current.riderPickupRef) leafletMap.current.riderPickupRef = null;
+    if (!leafletMap.current.riderDestRef) leafletMap.current.riderDestRef = null;
+
+    // 1. Driver Origin Marker (Indigo Pin)
+    if (origin) {
+      if (!leafletMap.current.originMarkerRef) {
+        leafletMap.current.originMarkerRef = L.circleMarker([origin.latitude, origin.longitude], {
+          color: '#4f46e5',
+          fillColor: '#6366f1',
+          radius: 9,
+          fillOpacity: 0.9,
+          weight: 2,
+        }).addTo(map);
+      } else {
+        leafletMap.current.originMarkerRef.setLatLng([origin.latitude, origin.longitude]);
+      }
+      leafletMap.current.originMarkerRef.bindPopup('<b>🚘 Driver Origin</b><br/>' + (origin.latitude.toFixed(4) + ', ' + origin.longitude.toFixed(4)));
+    } else if (leafletMap.current.originMarkerRef) {
+      map.removeLayer(leafletMap.current.originMarkerRef);
+      leafletMap.current.originMarkerRef = null;
+    }
+
+    // 2. Driver Destination Marker (Purple Pin)
     if (destination) {
-      L.circleMarker([destination.latitude, destination.longitude], {
-        color: '#e11d48',
-        fillColor: '#f43f5e',
-        radius: 9,
-        fillOpacity: 0.9,
-        weight: 2,
-      })
-        .addTo(map)
-        .bindPopup('<b>🏁 Driver Destination</b><br/>' + (destination.latitude.toFixed(4) + ', ' + destination.longitude.toFixed(4)));
+      if (!leafletMap.current.destMarkerRef) {
+        leafletMap.current.destMarkerRef = L.circleMarker([destination.latitude, destination.longitude], {
+          color: '#7c3aed',
+          fillColor: '#8b5cf6',
+          radius: 9,
+          fillOpacity: 0.9,
+          weight: 2,
+        }).addTo(map);
+      } else {
+        leafletMap.current.destMarkerRef.setLatLng([destination.latitude, destination.longitude]);
+      }
+      leafletMap.current.destMarkerRef.bindPopup('<b>🏁 Driver Destination</b><br/>' + (destination.latitude.toFixed(4) + ', ' + destination.longitude.toFixed(4)));
+    } else if (leafletMap.current.destMarkerRef) {
+      map.removeLayer(leafletMap.current.destMarkerRef);
+      leafletMap.current.destMarkerRef = null;
     }
 
     // 3. Rider Pickup Marker (Emerald Pin) & 500m Match Area Circle
     if (riderPickup) {
       const pickupLatLng: [number, number] = [riderPickup.latitude, riderPickup.longitude];
 
-      L.circleMarker(pickupLatLng, {
-        color: '#059669',
-        fillColor: '#10b981',
-        radius: 8,
-        fillOpacity: 0.95,
-        weight: 2,
-      })
-        .addTo(map)
-        .bindPopup('<b>🚴 Rider Pickup Target</b><br/>' + (pickupDistanceMeters ? `Distance: ${Math.round(pickupDistanceMeters)}m` : '500m Proximity'));
+      if (!leafletMap.current.riderPickupRef) {
+        leafletMap.current.riderPickupRef = L.circleMarker(pickupLatLng, {
+          color: '#059669',
+          fillColor: '#10b981',
+          radius: 8,
+          fillOpacity: 0.95,
+          weight: 2,
+        }).addTo(map);
+      } else {
+        leafletMap.current.riderPickupRef.setLatLng(pickupLatLng);
+      }
+      leafletMap.current.riderPickupRef.bindPopup('<b>🚴 Rider Pickup Target</b><br/>' + (pickupDistanceMeters ? `Distance: ${Math.round(pickupDistanceMeters)}m` : '500m Proximity'));
 
       // 500-meter PostGIS match area circle buffer
       if (!proximityCircleRef.current) {
@@ -123,29 +158,51 @@ export default function Map({
           weight: 1.5,
           dashArray: '4, 6',
         }).addTo(map).bindPopup('<b>500m Match Area Shield</b><br/>PostGIS Spatial Overlap Zone');
+      } else {
+        proximityCircleRef.current.setLatLng(pickupLatLng);
+      }
+    } else {
+      if (leafletMap.current.riderPickupRef) {
+        map.removeLayer(leafletMap.current.riderPickupRef);
+        leafletMap.current.riderPickupRef = null;
+      }
+      if (proximityCircleRef.current) {
+        map.removeLayer(proximityCircleRef.current);
+        proximityCircleRef.current = null;
       }
     }
 
     // 4. Rider Destination Marker (Orange Pin)
     if (riderDestination) {
-      L.circleMarker([riderDestination.latitude, riderDestination.longitude], {
-        color: '#d97706',
-        fillColor: '#f59e0b',
-        radius: 8,
-        fillOpacity: 0.95,
-        weight: 2,
-      })
-        .addTo(map)
-        .bindPopup('<b>🎯 Rider Dropoff Target</b>');
+      if (!leafletMap.current.riderDestRef) {
+        leafletMap.current.riderDestRef = L.circleMarker([riderDestination.latitude, riderDestination.longitude], {
+          color: '#d97706',
+          fillColor: '#f59e0b',
+          radius: 8,
+          fillOpacity: 0.95,
+          weight: 2,
+        }).addTo(map);
+      } else {
+        leafletMap.current.riderDestRef.setLatLng([riderDestination.latitude, riderDestination.longitude]);
+      }
+      leafletMap.current.riderDestRef.bindPopup('<b>🎯 Rider Dropoff Target</b>');
+    } else if (leafletMap.current.riderDestRef) {
+      map.removeLayer(leafletMap.current.riderDestRef);
+      leafletMap.current.riderDestRef = null;
     }
 
-    // 5. Driver Route Polyline (Solid Teal)
-    if (routeGeometryGeoJson && !routePolylineRef.current) {
+    // 5. Driver Route Polyline (Solid Indigo)
+    if (routePolylineRef.current) {
+      map.removeLayer(routePolylineRef.current);
+      routePolylineRef.current = null;
+    }
+
+    if (routeGeometryGeoJson) {
       try {
         const parsedGeoJson = JSON.parse(routeGeometryGeoJson);
         routePolylineRef.current = L.geoJSON(parsedGeoJson, {
           style: {
-            color: '#06b6d4',
+            color: '#6366f1',
             weight: 5,
             opacity: 0.85,
           },
@@ -159,29 +216,86 @@ export default function Map({
               [origin.latitude, origin.longitude],
               [destination.latitude, destination.longitude],
             ],
-            { color: '#06b6d4', weight: 4, opacity: 0.8 }
+            { color: '#6366f1', weight: 4, opacity: 0.8 }
           ).addTo(map);
         }
       }
-    } else if (origin && destination && !routePolylineRef.current) {
-      routePolylineRef.current = L.polyline(
-        [
-          [origin.latitude, origin.longitude],
-          [destination.latitude, destination.longitude],
-        ],
-        { color: '#06b6d4', weight: 4, opacity: 0.8 }
-      ).addTo(map);
+    } else if (origin && destination) {
+      // Fetch dynamic real road route from OSRM API
+      const fetchRealRoute = async () => {
+        try {
+          const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=geojson`);
+          const data = await res.json();
+          
+          if (data.routes && data.routes.length > 0) {
+            if (routePolylineRef.current) {
+              map.removeLayer(routePolylineRef.current);
+            }
+            routePolylineRef.current = L.geoJSON(data.routes[0].geometry, {
+              style: { color: '#6366f1', weight: 4, opacity: 0.8 },
+            }).addTo(map);
+            
+            // Optionally fit bounds to the route
+            map.fitBounds(routePolylineRef.current.getBounds(), { padding: [40, 40] });
+          } else {
+            throw new Error('No routes found');
+          }
+        } catch (err) {
+          console.error("OSRM Route Fetch Error:", err);
+          // Fallback to straight line
+          if (routePolylineRef.current) {
+            map.removeLayer(routePolylineRef.current);
+          }
+          routePolylineRef.current = L.polyline(
+            [
+              [origin.latitude, origin.longitude],
+              [destination.latitude, destination.longitude],
+            ],
+            { color: '#6366f1', weight: 4, opacity: 0.8 }
+          ).addTo(map);
+        }
+      };
+      
+      fetchRealRoute();
     }
 
     // 6. Rider Route Polyline (Dashed Amber)
-    if (riderPickup && riderDestination && !riderPolylineRef.current) {
-      riderPolylineRef.current = L.polyline(
-        [
-          [riderPickup.latitude, riderPickup.longitude],
-          [riderDestination.latitude, riderDestination.longitude],
-        ],
-        { color: '#f59e0b', weight: 3, dashArray: '6, 8', opacity: 0.9 }
-      ).addTo(map);
+    if (riderPolylineRef.current) {
+      map.removeLayer(riderPolylineRef.current);
+      riderPolylineRef.current = null;
+    }
+
+    if (riderPickup && riderDestination) {
+      const fetchRiderRoute = async () => {
+        try {
+          const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${riderPickup.longitude},${riderPickup.latitude};${riderDestination.longitude},${riderDestination.latitude}?overview=full&geometries=geojson`);
+          const data = await res.json();
+          
+          if (data.routes && data.routes.length > 0) {
+            if (riderPolylineRef.current) {
+              map.removeLayer(riderPolylineRef.current);
+            }
+            riderPolylineRef.current = L.geoJSON(data.routes[0].geometry, {
+              style: { color: '#f59e0b', weight: 3, dashArray: '6, 8', opacity: 0.9 },
+            }).addTo(map);
+          } else {
+            throw new Error('No routes found');
+          }
+        } catch (err) {
+          if (riderPolylineRef.current) {
+            map.removeLayer(riderPolylineRef.current);
+          }
+          riderPolylineRef.current = L.polyline(
+            [
+              [riderPickup.latitude, riderPickup.longitude],
+              [riderDestination.latitude, riderDestination.longitude],
+            ],
+            { color: '#f59e0b', weight: 3, dashArray: '6, 8', opacity: 0.9 }
+          ).addTo(map);
+        }
+      };
+      
+      fetchRiderRoute();
     }
 
     return () => {
@@ -220,7 +334,7 @@ export default function Map({
 
       {/* Legend & Matching Metrics Overlay */}
       <div className="absolute top-3 right-3 z-20 bg-white/95 dark:bg-[#0f172a]/95 backdrop-blur-md p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl text-[11px] font-bold space-y-1.5 max-w-[240px]">
-        <div className="text-[#1e3a8a] dark:text-cyan-300 uppercase tracking-wider text-[10px] border-b border-slate-100 dark:border-slate-800 pb-1">
+        <div className="text-[#1e3a8a] text-accent3 uppercase tracking-wider text-[10px] border-b border-slate-100 dark:border-slate-800 pb-1">
           Route Matching Engine
         </div>
 
@@ -238,7 +352,7 @@ export default function Map({
 
         {riderPickup && (
           <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200">
-            <span className="w-3 h-3 rounded-full bg-teal-500/20 border border-teal-500 inline-block" />
+            <span className="w-3 h-3 rounded-full bg-accent3/20 border border-accent3 inline-block" />
             <span>500m Match Area</span>
           </div>
         )}
@@ -246,7 +360,7 @@ export default function Map({
         {(matchScore !== undefined || pickupDistanceMeters !== undefined) && (
           <div className="pt-1 border-t border-slate-100 dark:border-slate-800 text-[10px] space-y-0.5">
             {matchScore !== undefined && (
-              <div className="text-teal-600 dark:text-teal-400 font-extrabold">
+              <div className="text-accent3 dark:text-accent3 font-extrabold">
                 Route Match: {Math.round(matchScore)}%
               </div>
             )}

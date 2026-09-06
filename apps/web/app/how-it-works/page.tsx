@@ -39,45 +39,45 @@ export default function HowItWorksPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen text-white flex flex-col font-sans transition-colors duration-200">
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-12 flex-1 space-y-12 w-full">
         <div className="text-center space-y-3 max-w-3xl mx-auto">
           <Badge variant="info">SIMPLE 4-STEP PROCESS</Badge>
-          <h1 className="text-4xl font-extrabold text-[#1e3a8a] dark:text-cyan-300 tracking-tight">
+          <h1 className="text-4xl font-extrabold text-white tracking-tight">
             How Campunex Works
           </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+          <p className="text-sm text-white/60 leading-relaxed">
             Connecting verified university commuters who share similar routes with zero pricing pressure and 100% spatial transparency.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {steps.map(({ step, icon: Icon, title, desc }) => (
-            <Card key={step} hoverable className="p-8 space-y-4">
+            <div key={step} className="bg-white/5 border border-white/10 p-8 rounded-[22px] space-y-4 transition-all hover:border-accent3/30 hover:shadow-[0_0_20px_rgba(14,165,233,0.15)]">
               <div className="flex items-center justify-between">
-                <div className="w-12 h-12 bg-[#e0f2fe] dark:bg-cyan-950/80 text-[#1e3a8a] dark:text-cyan-400 rounded-2xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-white/10 border border-white/20 text-accent3 rounded-2xl flex items-center justify-center">
                   <Icon className="w-6 h-6" />
                 </div>
-                <span className="text-2xl font-extrabold text-teal-500 dark:text-cyan-400 font-mono">
+                <span className="text-2xl font-extrabold text-accent3 font-mono">
                   {step}
                 </span>
               </div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{title}</h2>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{desc}</p>
-            </Card>
+              <h2 className="text-xl font-bold text-white">{title}</h2>
+              <p className="text-xs text-white/60 leading-relaxed">{desc}</p>
+            </div>
           ))}
         </div>
 
-        <div className="bg-[#1e3a8a] dark:bg-slate-900 text-white rounded-2xl p-8 text-center space-y-4 shadow-lg border border-[#1e3a8a] dark:border-slate-800">
+        <div className="bg-white/5 border border-white/10 rounded-[22px] p-8 text-center space-y-4">
           <h2 className="text-2xl font-extrabold">Ready to find your campus ride?</h2>
-          <p className="text-xs text-slate-300 max-w-lg mx-auto">
+          <p className="text-xs text-white/60 max-w-lg mx-auto">
             Join thousands of verified university students commuting safely every day.
           </p>
           <div className="pt-2 flex justify-center gap-4">
             <Link href="/register">
-              <Button variant="teal" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
+              <Button variant="primary" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
                 Get Started Now
               </Button>
             </Link>

@@ -8,6 +8,7 @@ interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   children: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'teal';
   size?: 'sm' | 'md' | 'lg';
+  square?: boolean;
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
@@ -15,8 +16,9 @@ interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
 
 export default function Button({
   children,
-  variant = 'primary',
+  variant = 'secondary',
   size = 'md',
+  square = false,
   isLoading = false,
   leftIcon,
   rightIcon,
@@ -24,34 +26,37 @@ export default function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const baseStyles = 'inline-flex items-center justify-center font-bold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none select-none';
+  const baseStyles = 'inline-flex items-center justify-center leading-none font-[800] tracking-[0.1px] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none select-none text-ink whitespace-nowrap border';
 
   const sizeStyles = {
-    sm: 'px-3 py-1.5 text-xs gap-1.5',
-    md: 'px-4 py-2.5 text-sm gap-2',
-    lg: 'px-6 py-3.5 text-base gap-2.5',
+    sm: 'px-3 py-1.5 text-[12px] gap-2',
+    md: 'px-[14px] py-[11px] text-[13.5px] gap-[10px]',
+    lg: 'px-6 py-3.5 text-[15px] gap-3',
   };
+
+  const radiusStyles = square ? 'rounded-[14px]' : 'rounded-full';
 
   const variantStyles = {
     primary:
-      'bg-[#1e3a8a] dark:bg-cyan-600 hover:bg-[#1d3271] dark:hover:bg-cyan-500 text-white shadow-md focus:ring-blue-500 dark:focus:ring-cyan-400',
+      'border-accent1/45 bg-gradient-to-br from-accent1/[0.95] to-accent2/[0.95] shadow-[0_14px_40px_rgba(76,125,255,0.25)] focus:ring-accent2',
     secondary:
-      'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-slate-400',
+      'border-stroke bg-white/[0.08] hover:bg-white/[0.10] focus:ring-white/20',
     outline:
-      'bg-transparent border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 focus:ring-slate-400',
+      'border-stroke bg-transparent hover:bg-white/[0.10] focus:ring-white/20',
     ghost:
-      'bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 focus:ring-slate-400',
+      'border-white/20 bg-transparent hover:bg-white/[0.10] focus:ring-white/20',
     danger:
-      'bg-rose-600 hover:bg-rose-700 text-white shadow-md focus:ring-rose-500',
+      'border-danger/45 bg-danger/90 text-white shadow-md focus:ring-danger',
     teal:
-      'bg-teal-600 hover:bg-teal-700 text-white shadow-md focus:ring-teal-400',
+      'border-accent3/45 bg-accent3/90 text-white shadow-md focus:ring-accent3',
   };
 
   return (
     <motion.button
-      whileTap={{ scale: disabled || isLoading ? 1 : 0.98 }}
+      whileHover={disabled || isLoading ? {} : { y: -1, boxShadow: '0 10px 26px rgba(0,0,0,0.24)' }}
+      whileTap={{ scale: disabled || isLoading ? 1 : 0.98, y: 0 }}
       disabled={disabled || isLoading}
-      className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}
+      className={`${baseStyles} ${sizeStyles[size]} ${radiusStyles} ${variantStyles[variant]} ${className}`}
       {...props}
     >
       {isLoading ? (

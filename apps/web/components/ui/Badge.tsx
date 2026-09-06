@@ -13,27 +13,44 @@ export default function Badge({
   variant = 'default',
   className = '',
 }: BadgeProps) {
-  const variantStyles = {
-    verified:
-      'bg-teal-50 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800',
-    pending:
-      'bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-    success:
-      'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-    warning:
-      'bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-    info:
-      'bg-[#e0f2fe] dark:bg-cyan-950/80 text-[#1e3a8a] dark:text-cyan-300 border-[#bae6fd] dark:border-cyan-800',
-    danger:
-      'bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800',
-    default:
-      'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+  const isStatus = ['verified', 'success', 'pending', 'warning', 'danger'].includes(variant);
+
+  const baseTag = 'inline-flex items-center leading-none gap-[8px] px-[10px] py-[6px] text-[12px] rounded-full border border-white/16 bg-white/[0.07] text-white/82';
+  const baseStatus = 'inline-flex items-center leading-none gap-[7px] px-[10px] py-[6px] rounded-full border font-[900] text-[12px] text-white/[0.86] whitespace-nowrap';
+
+  const statusStyles = {
+    verified: 'bg-accent3/[0.12] border-accent3/[0.18]',
+    success: 'bg-accent3/[0.12] border-accent3/[0.18]',
+    pending: 'bg-warn/[0.14] border-warn/[0.22]',
+    warning: 'bg-warn/[0.14] border-warn/[0.22]',
+    danger: 'bg-danger/[0.12] border-danger/[0.20]',
+    info: 'bg-accent2/[0.12] border-accent2/[0.18]',
+    default: '',
   };
 
+  const dotStyles = {
+    verified: 'bg-accent3',
+    success: 'bg-accent3',
+    pending: 'bg-warn',
+    warning: 'bg-warn',
+    danger: 'bg-danger',
+    info: 'bg-accent2',
+    default: 'bg-white/28',
+  };
+
+  if (!isStatus) {
+    return (
+      <span className={`${baseTag} ${className}`}>
+        {children}
+      </span>
+    );
+  }
+
   return (
-    <span
-      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border transition ${variantStyles[variant]} ${className}`}
-    >
+    <span className={`${baseStatus} ${statusStyles[variant]} ${className}`}>
+      {variant !== 'verified' && (
+        <span className={`w-[8px] h-[8px] rounded-full ${dotStyles[variant]}`}></span>
+      )}
       {children}
     </span>
   );

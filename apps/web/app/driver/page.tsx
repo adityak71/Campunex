@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
@@ -8,9 +9,10 @@ import Footer from '../../components/Footer';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
+import WorkspaceLayout from '../../components/layouts/WorkspaceLayout';
 import Skeleton from '../../components/ui/Skeleton';
 import EmptyState from '../../components/ui/EmptyState';
-import ThemeToggle from '../../components/ThemeToggle';
+
 import { useToast } from '../../components/ui/Toast';
 import { apiRequest } from '../../lib/api';
 import { User } from '@campunex/shared';
@@ -63,6 +65,11 @@ export default function DriverDashboardPage() {
         setError(null);
 
         const meRes = await apiRequest('/auth/me');
+        if (meRes.user.role === 'RIDER') {
+          showToast('Access denied: Rider tools are at /dashboard', 'error');
+          router.push('/dashboard');
+          return;
+        }
         setUser(meRes.user);
 
         // Fetch driver rides
@@ -120,7 +127,7 @@ export default function DriverDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans">
+      <div className="min-h-screen text-white flex flex-col font-sans">
         <Navbar />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-6 w-full">
           <Skeleton className="h-28 w-full" />
@@ -142,52 +149,31 @@ export default function DriverDashboardPage() {
   const pendingRequests = incomingRequests.filter((r) => r.status === 'REQUESTED' || r.status === 'PENDING');
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200 pb-12">
-      <Navbar />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-8 w-full">
-        {/* Header Profile & Quick Action Bar */}
-        <Card className="p-6 space-y-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-[#1e3a8a] dark:bg-cyan-600 text-white flex items-center justify-center font-extrabold text-xl shadow-md">
-                {user?.name ? user.name.substring(0, 2).toUpperCase() : 'DR'}
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl md:text-2xl font-bold text-[#1e3a8a] dark:text-cyan-300">
-                    Welcome back, {user?.name || 'Driver'}! 👋
-                  </h1>
-                  <Badge variant={user?.verification_status === 'VERIFIED' ? 'verified' : 'warning'}>
-                    {user?.verification_status === 'VERIFIED' ? 'Verified Campus Driver' : 'Pending Verification'}
-                  </Badge>
-                </div>
-                <p className="text-xs text-[#14b8a6] dark:text-cyan-300 font-bold">
-                  You are sharing your route with verified campus riders.
-                </p>
-              </div>
-            </div>
-
-            {/* Quick Driver Action Buttons */}
-            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-              <Link href="/driver/offer">
-                <Button variant="teal" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
-                  Offer Ride
-                </Button>
-              </Link>
-              <Link href="/driver/requests">
-                <Button variant="outline" size="sm" leftIcon={<UserCheck className="w-4 h-4 text-teal-500" />}>
-                  View Requests ({pendingRequests.length})
-                </Button>
-              </Link>
-              <Link href="/driver/rides">
-                <Button variant="outline" size="sm" leftIcon={<Car className="w-4 h-4 text-indigo-500" />}>
-                  My Rides ({activeRides.length})
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </Card>
+    <WorkspaceLayout
+      title="Driver Home"
+      subtitle="Manage your rides, requests, and routes."
+      mode="driver"
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/driver/offer">
+            <Button variant="primary" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
+              Offer Ride
+            </Button>
+          </Link>
+          <Link href="/driver/requests">
+            <Button variant="ghost" size="sm" className="bg-white/5 border border-white/10" leftIcon={<UserCheck className="w-4 h-4 text-accent1" />}>
+              Requests ({pendingRequests.length})
+            </Button>
+          </Link>
+          <Link href="/driver/rides">
+            <Button variant="ghost" size="sm" className="bg-white/5 border border-white/10" leftIcon={<Car className="w-4 h-4 text-accent2" />}>
+              My Rides ({activeRides.length})
+            </Button>
+          </Link>
+        </div>
+      }
+    >
+      <div className="space-y-6">
 
         {/* Error Alert */}
         {error && (
@@ -203,77 +189,130 @@ export default function DriverDashboardPage() {
         )}
 
         {/* Driver Availability Switch */}
-        <Card className={`p-6 transition-all duration-300 border-2 ${
+        {/* Driver Availability Switch */}
+        <Card className={`relative overflow-hidden p-6 sm:p-8 transition-all duration-500 rounded-[32px] ${
           isOnline
-            ? 'bg-teal-50/60 dark:bg-teal-950/30 border-teal-400/80 dark:border-teal-800'
-            : 'bg-slate-100/80 dark:bg-slate-900/80 border-slate-300 dark:border-slate-800'
+            ? 'bg-gradient-to-r from-[#171033]/90 to-[#0d1633]/90 border border-indigo-500/30 shadow-[0_8px_32px_rgba(99,102,241,0.2)]'
+            : 'bg-white/5 border border-white/10 shadow-lg'
         }`}>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full ${isOnline ? 'bg-teal-500 animate-ping' : 'bg-slate-400'}`} />
-                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+          {isOnline && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[150%] bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none" />
+          )}
+          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="space-y-3 flex-1">
+              <div className="flex items-center gap-3">
+                <div className="relative flex items-center justify-center">
+                  <span className={`w-3.5 h-3.5 rounded-full z-10 ${isOnline ? 'bg-indigo-400 shadow-[0_0_12px_rgba(129,140,248,0.8)]' : 'bg-white/30'}`} />
+                  {isOnline && (
+                    <span className="absolute w-5 h-5 rounded-full bg-indigo-400/40 animate-ping" />
+                  )}
+                </div>
+                <h2 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70 tracking-tight">
                   {isOnline ? "You're available for compatible ride requests" : "You're currently offline"}
                 </h2>
-                <Badge variant={isOnline ? 'success' : 'default'}>
+                <Badge variant={isOnline ? 'success' : 'default'} className={!isOnline ? 'bg-white/10 text-white/70 border-white/10' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'}>
                   {isOnline ? 'ONLINE' : 'OFFLINE'}
                 </Badge>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-white/60 leading-relaxed max-w-2xl font-medium">
                 {isOnline
-                  ? 'Your published driver routes are visible to campus riders within the 500m proximity engine.'
+                  ? 'Your published driver routes are visible to campus riders within the 500m proximity engine. Stay alert for incoming requests.'
                   : 'Toggle online when you are ready to accept rider seat requests on your commute.'}
               </p>
             </div>
 
-            <Button
-              variant={isOnline ? 'danger' : 'teal'}
-              size="md"
+            <button
               onClick={toggleAvailability}
-              leftIcon={<Power className="w-4 h-4" />}
+              className={`relative flex items-center p-1.5 w-[92px] h-[48px] rounded-full transition-all duration-500 focus:outline-none shrink-0 ${
+                isOnline ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-white/10'
+              }`}
+              style={{
+                boxShadow: isOnline ? 'inset 0 2px 4px rgba(0,0,0,0.3)' : 'inset 0 2px 4px rgba(0,0,0,0.4)'
+              }}
             >
-              {isOnline ? 'Go Offline' : 'Go Online'}
-            </Button>
+              <motion.div
+                className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-lg"
+                layout
+                animate={{
+                  x: isOnline ? 44 : 0,
+                }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 600,
+                  damping: 25,
+                }}
+              >
+                <Power className={`w-5 h-5 ${isOnline ? 'text-indigo-600' : 'text-white/40'}`} />
+              </motion.div>
+            </button>
           </div>
         </Card>
 
         {/* 4 Analytics Metrics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="p-4 space-y-2 border-l-4 border-l-teal-500">
-            <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Open Rides</div>
-            <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{activeRides.length}</div>
-            <p className="text-[10px] text-slate-400">Active in route inventory</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+          <Card className="relative overflow-hidden p-6 border border-white/10 rounded-[28px] bg-gradient-to-br from-[#12121e]/90 to-[#181829]/90 shadow-xl group hover:border-blue-500/40 transition-all duration-300">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 to-blue-400 opacity-40 group-hover:opacity-100 transition-opacity" />
+            <div className="flex justify-between items-start mb-4">
+              <div className="text-xs font-bold text-white/50 uppercase tracking-widest">Open Rides</div>
+              <div className="p-2 bg-blue-500/10 rounded-xl group-hover:scale-110 transition-transform">
+                <Car className="w-5 h-5 text-blue-400" />
+              </div>
+            </div>
+            <div className="text-4xl font-black bg-gradient-to-br from-white to-white/60 bg-clip-text text-transparent mb-1">
+              {activeRides.length}
+            </div>
+            <p className="text-xs text-white/40 font-medium">Active in route inventory</p>
           </Card>
 
-          <Card className="p-4 space-y-2 border-l-4 border-l-amber-500">
-            <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending Requests</div>
-            <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400">{pendingRequests.length}</div>
-            <p className="text-[10px] text-slate-400">Awaiting your approval</p>
+          <Card className="relative overflow-hidden p-6 border border-white/10 rounded-[28px] bg-gradient-to-br from-[#12121e]/90 to-[#181829]/90 shadow-xl group hover:border-indigo-500/40 transition-all duration-300">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-600 to-indigo-400 opacity-40 group-hover:opacity-100 transition-opacity" />
+            <div className="flex justify-between items-start mb-4">
+              <div className="text-xs font-bold text-white/50 uppercase tracking-widest">Requests</div>
+              <div className="p-2 bg-indigo-500/10 rounded-xl group-hover:scale-110 transition-transform">
+                <Bell className="w-5 h-5 text-indigo-400" />
+              </div>
+            </div>
+            <div className="text-4xl font-black bg-gradient-to-br from-white to-white/60 bg-clip-text text-transparent mb-1">
+              {pendingRequests.length}
+            </div>
+            <p className="text-xs text-white/40 font-medium">Awaiting approval</p>
           </Card>
 
-          <Card className="p-4 space-y-2 border-l-4 border-l-indigo-500">
-            <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Accepted Riders</div>
-            <div className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">
+          <Card className="relative overflow-hidden p-6 border border-white/10 rounded-[28px] bg-gradient-to-br from-[#12121e]/90 to-[#181829]/90 shadow-xl group hover:border-purple-500/40 transition-all duration-300">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-600 to-purple-400 opacity-40 group-hover:opacity-100 transition-opacity" />
+            <div className="flex justify-between items-start mb-4">
+              <div className="text-xs font-bold text-white/50 uppercase tracking-widest">Accepted</div>
+              <div className="p-2 bg-purple-500/10 rounded-xl group-hover:scale-110 transition-transform">
+                <ShieldCheck className="w-5 h-5 text-purple-400" />
+              </div>
+            </div>
+            <div className="text-4xl font-black bg-gradient-to-br from-white to-white/60 bg-clip-text text-transparent mb-1">
               {incomingRequests.filter((r) => r.status === 'ACCEPTED').length}
             </div>
-            <p className="text-[10px] text-slate-400">Confirmed seat bookings</p>
+            <p className="text-xs text-white/40 font-medium">Confirmed bookings</p>
           </Card>
 
-          <Card className="p-4 space-y-2 border-l-4 border-l-emerald-500">
-            <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Completed Trips</div>
-            <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
+          <Card className="relative overflow-hidden p-6 border border-white/10 rounded-[28px] bg-gradient-to-br from-[#12121e]/90 to-[#181829]/90 shadow-xl group hover:border-fuchsia-500/40 transition-all duration-300">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-fuchsia-600 to-fuchsia-400 opacity-40 group-hover:opacity-100 transition-opacity" />
+            <div className="flex justify-between items-start mb-4">
+              <div className="text-xs font-bold text-white/50 uppercase tracking-widest">Completed</div>
+              <div className="p-2 bg-fuchsia-500/10 rounded-xl group-hover:scale-110 transition-transform">
+                <Navigation2 className="w-5 h-5 text-fuchsia-400" />
+              </div>
+            </div>
+            <div className="text-4xl font-black bg-gradient-to-br from-white to-white/60 bg-clip-text text-transparent mb-1">
               {recentHistory.filter((t) => t.status === 'COMPLETED').length}
             </div>
-            <p className="text-[10px] text-slate-400">Logged in PostgreSQL</p>
+            <p className="text-xs text-white/40 font-medium">Trips finished</p>
           </Card>
         </div>
 
         {/* TODAY'S PUBLISHED RIDES INVENTORY */}
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-extrabold text-[#1e3a8a] dark:text-cyan-300 flex items-center gap-2">
-              <Car className="w-5 h-5 text-teal-600 dark:text-cyan-400" />
-              TODAY'S PUBLISHED DRIVER RIDES
+            <h2 className="text-xs font-bold text-white/50 uppercase tracking-wider flex items-center gap-2">
+              <Car className="w-4 h-4 text-white/40" />
+              Today's Published Driver Rides
             </h2>
             <Link href="/driver/offer">
               <Button variant="outline" size="sm" leftIcon={<Plus className="w-3.5 h-3.5" />}>
@@ -300,15 +339,15 @@ export default function DriverDashboardPage() {
                 const isFull = availableSeats <= 0;
 
                 return (
-                  <Card key={ride.id} className="p-5 space-y-4 hover:shadow-md transition border border-slate-200 dark:border-slate-800">
+                  <Card key={ride.id} className="p-5 space-y-4 hover:shadow-md transition bg-[#12121e]/80 border-white/10 text-white rounded-[26px]">
                     <div className="flex justify-between items-start">
                       <div className="space-y-1">
-                        <div className="font-extrabold text-base text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                          <MapPin className="w-4 h-4 text-teal-500" />
+                        <div className="font-extrabold text-base text-white/90 flex items-center gap-1.5">
+                          <MapPin className="w-4 h-4 text-teal-400" />
                           {ride.origin_name} ➔ {ride.destination_name}
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        <div className="text-xs text-white/50 flex items-center gap-2">
+                          <Clock className="w-3.5 h-3.5 text-white/40" />
                           <span>Departure: {formatDepartureTime(ride.departure_time)}</span>
                         </div>
                       </div>
@@ -319,14 +358,14 @@ export default function DriverDashboardPage() {
                     </div>
 
                     {/* Seat Capacity Bar */}
-                    <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl space-y-1 text-xs">
+                    <div className="p-3 bg-white/5 rounded-xl space-y-1 text-xs">
                       <div className="flex justify-between font-bold">
-                        <span className="text-slate-600 dark:text-slate-400">Available Seat Capacity</span>
-                        <span className={isFull ? 'text-rose-600 font-extrabold' : 'text-teal-600 dark:text-cyan-400 font-extrabold'}>
+                        <span className="text-white/60">Available Seat Capacity</span>
+                        <span className={isFull ? 'text-rose-400 font-extrabold' : 'text-teal-400 font-extrabold'}>
                           {availableSeats} / {totalSeats} seats remaining
                         </span>
                       </div>
-                      <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                         <div
                           className={`h-full transition-all ${isFull ? 'bg-rose-500' : 'bg-teal-500'}`}
                           style={{ width: `${((totalSeats - availableSeats) / totalSeats) * 100}%` }}
@@ -334,7 +373,7 @@ export default function DriverDashboardPage() {
                       </div>
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
                       <Link href={`/driver/rides/${ride.id}`}>
                         <Button variant="outline" size="sm" rightIcon={<ChevronRight className="w-3.5 h-3.5" />}>
                           Manage Ride
@@ -346,10 +385,8 @@ export default function DriverDashboardPage() {
               })}
             </div>
           )}
-        </div>
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+      </div>
+    </WorkspaceLayout>
   );
 }

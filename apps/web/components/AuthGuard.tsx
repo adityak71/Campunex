@@ -17,6 +17,7 @@ const PUBLIC_ROUTES = [
   '/how-it-works',
   '/contact',
   '/help',
+  '/safety',
 ];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -72,6 +73,14 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             setLoading(false);
             return;
           }
+        } else if (pathname === '/dashboard') {
+          if (role === 'DRIVER') {
+            router.replace('/driver');
+            return;
+          } else if (role === 'ADMIN') {
+            router.replace('/admin');
+            return;
+          }
         }
 
         setAuthorized(true);
@@ -87,10 +96,42 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     checkAccess();
   }, [pathname, router]);
 
+  if (unauthorizedMessage) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a]">
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            setUnauthorizedMessage(null);
+            router.push('/');
+          }}
+          title="Unauthorized Access"
+        >
+          <div className="space-y-4 text-center">
+            <p className="text-slate-600 dark:text-slate-300 font-medium">
+              {unauthorizedMessage}
+            </p>
+            <div className="flex justify-center pt-4">
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setUnauthorizedMessage(null);
+                  router.push('/');
+                }}
+              >
+                Back to Home
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      </div>
+    );
+  }
+
   if (!authorized && !PUBLIC_ROUTES.includes(pathname) && !pathname.startsWith('/verify')) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent3"></div>
       </div>
     );
   }
@@ -98,31 +139,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
-      <Modal
-        isOpen={!!unauthorizedMessage}
-        onClose={() => {
-          setUnauthorizedMessage(null);
-          router.push('/');
-        }}
-        title="Unauthorized Access"
-      >
-        <div className="space-y-4 text-center">
-          <p className="text-slate-600 dark:text-slate-300 font-medium">
-            {unauthorizedMessage}
-          </p>
-          <div className="flex justify-center pt-4">
-            <Button
-              variant="primary"
-              onClick={() => {
-                setUnauthorizedMessage(null);
-                router.push('/');
-              }}
-            >
-              Back to Home
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </>
   );
 }
