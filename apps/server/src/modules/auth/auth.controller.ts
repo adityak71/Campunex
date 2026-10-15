@@ -7,7 +7,9 @@ export async function handleRegister(req: Request, res: Response): Promise<void>
   try {
     const parseResult = registerSchema.safeParse(req.body);
     if (!parseResult.success) {
-      res.status(400).json({ error: 'Validation Error', details: parseResult.error.format() });
+      const firstIssue = parseResult.error.issues[0];
+      const errorMsg = firstIssue ? `${firstIssue.path.join('.') || 'Input'}: ${firstIssue.message}` : 'Validation Error';
+      res.status(400).json({ error: errorMsg, details: parseResult.error.format() });
       return;
     }
 

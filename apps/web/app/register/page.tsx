@@ -15,6 +15,7 @@ export default function RegisterPage() {
     lastName: '',
     email: '',
     password: '',
+    role: 'RIDER' as 'RIDER' | 'DRIVER',
     university: 'Lovely Professional University',
   });
   const [error, setError] = useState('');
@@ -28,20 +29,28 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+      const payload = {
+        name: fullName || formData.firstName.trim() || 'Campus User',
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+        role: formData.role,
+        university: formData.university,
+      };
+
       const res = await apiRequest('/auth/register', {
         method: 'POST',
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (res.token) {
         localStorage.setItem('campunex_token', res.token);
-        showToast('Registration successful!', 'success');
-        
-        // Always redirect to dashboard, role might be default RIDER initially
-        router.push('/dashboard');
-      } else {
-        router.push('/verify');
       }
+
+      showToast('Account created! Please verify your university email.', 'success');
+      router.push(`/verify?email=${encodeURIComponent(formData.email.trim())}`);
     } catch (err: any) {
       const errMsg = err.message || 'Registration failed';
       setError(errMsg);
@@ -84,6 +93,44 @@ export default function RegisterPage() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Role Selection */}
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-white/90">I want to join as</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: 'RIDER' })}
+                    className={`p-3.5 rounded-xl border text-left transition-all flex flex-col gap-1 ${
+                      formData.role === 'RIDER'
+                        ? 'border-primary bg-primary/20 text-white shadow-[0_0_15px_rgba(208,188,255,0.25)] ring-1 ring-primary'
+                        : 'border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/8'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">🎒</span>
+                      <span className="font-bold text-sm text-white">Rider</span>
+                    </div>
+                    <span className="text-[11px] text-white/60">Find & share campus rides</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: 'DRIVER' })}
+                    className={`p-3.5 rounded-xl border text-left transition-all flex flex-col gap-1 ${
+                      formData.role === 'DRIVER'
+                        ? 'border-secondary bg-secondary/20 text-white shadow-[0_0_15px_rgba(192,193,255,0.25)] ring-1 ring-secondary'
+                        : 'border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/8'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">🚗</span>
+                      <span className="font-bold text-sm text-white">Driver</span>
+                    </div>
+                    <span className="text-[11px] text-white/60">Publish routes & offer seats</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-1.5">
                   <label className="block text-sm font-bold text-white/90">First name</label>

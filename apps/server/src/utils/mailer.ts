@@ -13,8 +13,12 @@ const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
  * Sends a verification OTP email to the user.
  */
 export async function sendVerificationEmail(toEmail: string, otp: string): Promise<void> {
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`🔐 [CAMPUNEX VERIFICATION OTP] Recipient: ${toEmail} | CODE: ${otp}`);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
   if (!apiKey.apiKey || apiKey.apiKey === 'MISSING_API_KEY') {
-    console.warn(`[MAILER] No Brevo API Key found. Skipping email to ${toEmail}.`);
+    console.warn(`[MAILER] No Brevo API Key found. Skipping live email to ${toEmail}. Check Render logs for OTP above.`);
     return;
   }
 

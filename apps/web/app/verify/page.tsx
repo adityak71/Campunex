@@ -14,11 +14,20 @@ import { ShieldCheck, Mail, ArrowRight, RefreshCw } from 'lucide-react';
 
 export default function VerifyPage() {
   const [otp, setOtp] = useState('');
+  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(30);
   const router = useRouter();
   const { showToast } = useToast();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const e = params.get('email');
+      if (e) setEmail(e);
+    }
+  }, []);
 
   useEffect(() => {
     let timer: any;
@@ -40,13 +49,21 @@ export default function VerifyPage() {
     setLoading(true);
 
     try {
-      await apiRequest('/auth/verify-institution', {
+      const res = await apiRequest('/auth/verify-institution', {
         method: 'POST',
         body: JSON.stringify({ otp }),
       });
 
+      if (res?.token) {
+        localStorage.setItem('campunex_token', res.token);
+      }
+
       showToast('University email verified successfully!', 'success');
-      router.push('/dashboard');
+      if (res?.user?.role === 'DRIVER') {
+        router.push('/driver');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err: any) {
       const errMsg = err.message || 'OTP verification failed';
       setError(errMsg);
@@ -84,6 +101,7 @@ export default function VerifyPage() {
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
               Enter the 6-digit verification OTP sent to your campus email address
+              {email ? <span className="block mt-1 font-bold text-teal-600 dark:text-cyan-400">{email}</span> : null}
             </p>
           </div>
 
