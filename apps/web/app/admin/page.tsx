@@ -31,19 +31,18 @@ import {
   FileText
 } from 'lucide-react';
 
-const ADMIN_STATS = [
-  { label: 'Total Users', value: '12,847', change: '+8.3%', icon: Users, color: 'text-blue-600 bg-blue-50 dark:bg-blue-950' },
-  { label: 'Verified Users', value: '9,214', change: '+5.1%', icon: UserCheck, color: 'text-teal-600 bg-teal-50 dark:bg-teal-950' },
-  { label: 'Active Rides', value: '341', change: '+12.4%', icon: Activity, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950' },
-  { label: 'Completed Trips', value: '48,392', change: '+3.7%', icon: CheckCircle, color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950' },
-  { label: 'Pending Verifications', value: '278', change: '-14.2%', icon: Clock, color: 'text-amber-600 bg-amber-50 dark:bg-amber-950' },
-  { label: 'Universities', value: '47', change: '+2', icon: Building, color: 'text-purple-600 bg-purple-50 dark:bg-purple-950' },
-];
-
 export default function AdminDashboardPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    verifiedUsers: 0,
+    activeRides: 0,
+    completedTrips: 0,
+    pendingVerifications: 0,
+    totalInstitutions: 0,
+  });
   const router = useRouter();
   const { showToast } = useToast();
 
@@ -54,6 +53,17 @@ export default function AdminDashboardPage() {
         setCurrentUser(res.user);
         if (res.user.role === 'ADMIN') {
           setAuthorized(true);
+          const sysRes = await apiRequest('/admin/system').catch(() => null);
+          if (sysRes?.system) {
+            setStats({
+              totalUsers: sysRes.system.totalUsers ?? 0,
+              verifiedUsers: sysRes.system.verifiedUsers ?? 0,
+              activeRides: sysRes.system.activeRides ?? 0,
+              completedTrips: sysRes.system.completedTrips ?? 0,
+              pendingVerifications: sysRes.system.pendingVerifications ?? 0,
+              totalInstitutions: sysRes.system.totalInstitutions ?? 0,
+            });
+          }
         } else {
           setAuthorized(false);
           showToast('Unauthorized access. Admin privileges required.', 'error');
@@ -65,7 +75,7 @@ export default function AdminDashboardPage() {
       }
     }
     checkAdminAuth();
-  }, []);
+  }, [showToast]);
 
   if (loading) {
     return (
@@ -147,7 +157,14 @@ export default function AdminDashboardPage() {
 
         {/* Metrics Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {ADMIN_STATS.map((stat, idx) => {
+          {[
+            { label: 'Total Users', value: stats.totalUsers.toLocaleString(), icon: Users, color: 'text-blue-600 bg-blue-50 dark:bg-blue-950', badge: 'Active' },
+            { label: 'Verified Users', value: stats.verifiedUsers.toLocaleString(), icon: UserCheck, color: 'text-teal-600 bg-teal-50 dark:bg-teal-950', badge: 'Verified' },
+            { label: 'Active Rides', value: stats.activeRides.toLocaleString(), icon: Activity, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950', badge: 'Live' },
+            { label: 'Completed Trips', value: stats.completedTrips.toLocaleString(), icon: CheckCircle, color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950', badge: 'Done' },
+            { label: 'Pending Verifications', value: stats.pendingVerifications.toLocaleString(), icon: Clock, color: 'text-amber-600 bg-amber-50 dark:bg-amber-950', badge: 'Queue' },
+            { label: 'Universities', value: stats.totalInstitutions.toLocaleString(), icon: Building, color: 'text-purple-600 bg-purple-50 dark:bg-purple-950', badge: 'Campuses' },
+          ].map((stat, idx) => {
             const Icon = stat.icon;
             return (
               <Card key={idx} className="p-4 space-y-2">
@@ -155,7 +172,7 @@ export default function AdminDashboardPage() {
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${stat.color}`}>
                     <Icon className="w-4 h-4" />
                   </div>
-                  <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400">{stat.change}</span>
+                  <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400">{stat.badge}</span>
                 </div>
                 <div>
                   <div className="text-lg font-extrabold text-slate-900 dark:text-slate-100">{stat.value}</div>

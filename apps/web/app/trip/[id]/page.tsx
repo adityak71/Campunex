@@ -108,15 +108,16 @@ export default function TripLivePage() {
           try {
             const reqRes = await apiRequest(`/rides/${tripData.ride_id}/requests`);
             const accepted = (reqRes.requests || []).filter((r: any) => r.status === 'ACCEPTED');
+            const isAlreadyStarted = ['STARTED', 'IN_PROGRESS', 'COMPLETION_PENDING', 'COMPLETED'].includes(tripData.status);
             setAcceptedRiders(
               accepted.map((r: any, idx: number) => ({
                 id: r.id,
                 name: r.rider_name || 'Rider',
                 seatNumber: idx + 1,
                 verified: true,
-                otpVerified: false,
+                otpVerified: isAlreadyStarted,
                 pickupName: r.origin_lat ? `${r.origin_lat}, ${r.origin_lng}` : 'Pickup Point',
-                status: 'PENDING' as const,
+                status: isAlreadyStarted ? ('VERIFIED' as const) : ('PENDING' as const),
                 otpInput: '',
               }))
             );
@@ -162,6 +163,11 @@ export default function TripLivePage() {
     socket.on('trip:status_change', (data: { status: TripStatus }) => {
       setTripStatus(data.status);
       showToast(`Trip status updated: ${data.status}`, 'success');
+      if (['STARTED', 'IN_PROGRESS', 'COMPLETION_PENDING', 'COMPLETED'].includes(data.status)) {
+        setAcceptedRiders((prev) =>
+          prev.map((r) => ({ ...r, otpVerified: true, status: 'VERIFIED' }))
+        );
+      }
       if (data.status === 'COMPLETED') {
         router.push(`/trip/${tripId}/complete`);
       }
@@ -210,6 +216,7 @@ export default function TripLivePage() {
       setAcceptedRiders((prev) =>
         prev.map((r) => (r.id === riderId ? { ...r, otpVerified: true, status: 'VERIFIED' } : r))
       );
+      setTripStatus('IN_PROGRESS');
       showToast(`✅ ${targetRider.name}'s seat verified! OTP accepted.`, 'success');
     } catch (err: any) {
       showToast(`OTP verification failed: ${err.message}`, 'error');
@@ -415,13 +422,39 @@ export default function TripLivePage() {
                           </div>
                         </div>
 
-                        <Badge variant={rider.otpVerified ? 'success' : rider.status === 'NO_SHOW' ? 'danger' : 'warning'}>
-                          {rider.otpVerified ? 'OTP VERIFIED' : rider.status === 'NO_SHOW' ? 'NO-SHOW' : 'OTP PENDING'}
+                        <Badge variant={rider.otpVerified || ['STARTED', 'IN_PROGRESS', 'COMPLETION_PENDING', 'COMPLETED'].includes(tripStatus) ? 'success' : rider.status === 'NO_SHOW' ? 'danger' : 'warning'}>
+                          {rider.otpVerified || ['STARTED', 'IN_PROGRESS', 'COMPLETION_PENDING', 'COMPLETED'].includes(tripStatus) ? 'OTP VERIFIED' : rider.status === 'NO_SHOW' ? 'NO-SHOW' : 'OTP PENDING'}
                         </Badge>
                       </div>
 
-                      {/* OTP Input Form per Rider */}
-                      {!rider.otpVerified && rider.status !== 'NO_SHOW' && (
+                      {/* OTP Verification State / Input Box */}
+                      {rider.otpVerified || ['STARTED', 'IN_PROGRESS', 'COMPLETION_PENDING', 'COMPLETED'].includes(tripStatus) ? (
+                        <div className="pt-3 border-t border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-teal-500/10 rounded-xl border border-emerald-500/30">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]">
+                              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-black tracking-wide uppercase text-emerald-400 flex items-center gap-2">
+                                <span>Start OTP Verified & Boarded</span>
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                  AUTHENTICATED
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-emerald-400/80 font-medium mt-0.5">
+                                Passenger identity verified • Seat #{rider.seatNumber} confirmed in transit
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 self-start sm:self-center">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 shadow-sm">
+                              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                              Active Passenger
+                            </span>
+                          </div>
+                        </div>
+                      ) : rider.status !== 'NO_SHOW' ? (
                         <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center gap-3">
                           <div className="flex-1 w-full">
                             <Input
@@ -460,7 +493,7 @@ export default function TripLivePage() {
                             </Button>
                           </div>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   ))}
                 </div>

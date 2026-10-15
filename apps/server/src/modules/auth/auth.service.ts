@@ -4,6 +4,7 @@ import { hashPassword, verifyPassword } from '../../utils/password.js';
 import { signToken, JwtPayload } from '../../utils/jwt.js';
 import { UserRole, VerificationStatus, User } from '@campunex/shared';
 import { sendVerificationEmail } from '../../utils/mailer.js';
+import { createAndEmitNotification, notifyAdmins } from '../../utils/notifications.js';
 
 export async function registerUser(data: {
   name: string;
@@ -134,6 +135,34 @@ export async function verifyInstitutionOtp(
   };
 
   const newToken = signToken(jwtPayload);
+
+  // Send role-isolated account verification notification
+  createAndEmitNotification({
+    recipient_id: updatedUser.id,
+    recipient_role: updatedUser.role,
+    event_type: 'ACCOUNT_VERIFIED',
+    category: 'ACCOUNT',
+    title: 'University Identity Verified',
+    message:
+      updatedUser.role === 'DRIVER'
+        ? 'Your institutional email is verified. Your driver profile is now active and ready to publish routes.'
+        : 'Your university email is verified. You can now request seats and commute across campus.',
+    priority: 'HIGH',
+    action_type: updatedUser.role === 'DRIVER' ? 'VIEW_DRIVER_DASHBOARD' : 'FIND_RIDES',
+    action_url: updatedUser.role === 'DRIVER' ? '/driver' : '/rides/find',
+  }).catch(console.error);
+
+  // Notify admins that a new verified user has completed onboarding
+  notifyAdmins({
+    event_type: 'NEW_USER_VERIFIED',
+    category: 'ACCOUNT',
+    title: 'New Campus Member Verified',
+    message: `${updatedUser.name} (${updatedUser.email}) verified institutional status as ${updatedUser.role}.`,
+    priority: 'LOW',
+    action_type: 'MANAGE_USERS',
+    action_url: '/admin',
+  }).catch(console.error);
+
   return { user: updatedUser, token: newToken };
 }
 

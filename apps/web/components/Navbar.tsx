@@ -5,15 +5,54 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { apiRequest } from '../lib/api';
 import { User } from '@campunex/shared';
-import { Navigation2, LogOut, Shield, Menu, X, Car, Search, PlusCircle, Bell, UserCheck } from 'lucide-react';
+import { Navigation2, LogOut, Shield, Menu, X, Car, Search, PlusCircle, Bell, UserCheck, Download } from 'lucide-react';
 import NotificationCenter from './NotificationCenter';
 import Button from './ui/Button';
+import InstallAppModal from './InstallAppModal';
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const [installPlatform, setInstallPlatform] = useState<'android' | 'ios' | 'mac'>('android');
   const router = useRouter();
   const pathname = usePathname();
+
+  const handleInstallClick = async () => {
+    const prompt = typeof window !== 'undefined' ? (window as any).__campunexDeferredPrompt : null;
+    if (prompt) {
+      try {
+        prompt.prompt();
+        const choice = await prompt.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          (window as any).__campunexDeferredPrompt = null;
+          return;
+        }
+      } catch (e) {}
+    }
+
+    let detectedPlatform: 'android' | 'ios' | 'mac' = 'mac';
+    if (typeof navigator !== 'undefined') {
+      const ua = navigator.userAgent.toLowerCase();
+      if (/iphone|ipad|ipod/.test(ua)) detectedPlatform = 'ios';
+      else if (/android/.test(ua)) detectedPlatform = 'android';
+      else detectedPlatform = 'mac';
+    }
+
+    setInstallPlatform(detectedPlatform);
+    setShowInstallModal(true);
+  };
+
+  useEffect(() => {
+    const handleOpenInstall = (e: any) => {
+      if (e?.detail?.platform) {
+        setInstallPlatform(e.detail.platform);
+      }
+      setShowInstallModal(true);
+    };
+    window.addEventListener('campunex:open_install_modal', handleOpenInstall);
+    return () => window.removeEventListener('campunex:open_install_modal', handleOpenInstall);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('campunex_token');
@@ -43,6 +82,21 @@ export default function Navbar() {
   };
 
   const isDriverRole = user?.role === 'DRIVER';
+  const isAdminRole = user?.role === 'ADMIN';
+
+  const userHomeHref = user
+    ? isDriverRole
+      ? '/driver'
+      : isAdminRole
+      ? '/admin'
+      : '/dashboard'
+    : '/';
+
+  const userProfileHref = isDriverRole
+    ? '/driver/profile'
+    : isAdminRole
+    ? '/admin/settings'
+    : '/profile';
 
   return (
     <nav className="sticky top-0 z-50 backdrop-blur-[14px] border-b border-white/10 bg-gradient-to-b from-[#0c0b17]/70 to-[#0c0b17]/35">
@@ -50,7 +104,7 @@ export default function Navbar() {
         
         {/* Brand Logo */}
         <Link
-          href={user ? (isDriverRole ? '/driver' : '/dashboard') : '/'}
+          href={userHomeHref}
           className="flex items-center gap-2.5 font-[900] tracking-[-0.02em] whitespace-nowrap"
         >
           <div className="w-[34px] h-[34px] rounded-[10px] bg-gradient-to-br from-accent1 to-accent2 shadow-[0_16px_40px_rgba(181,108,255,0.20)] border border-white/18 flex items-center justify-center relative overflow-hidden">
@@ -62,16 +116,30 @@ export default function Navbar() {
 
         {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-2 flex-wrap justify-end">
+          {user && (
+            <Link
+              href={userHomeHref}
+              className="px-2.5 py-2 rounded-full text-accent1 font-[800] text-[13px] hover:bg-white/5 transition-colors"
+            >
+              {isDriverRole ? 'Driver Home' : isAdminRole ? 'Admin Console' : 'Dashboard'}
+            </Link>
+          )}
           <Link href="/how-it-works" className="px-2.5 py-2 rounded-full text-white/74 font-[700] text-[13px] hover:bg-white/5 hover:text-white/92 transition-colors">How it works</Link>
-          <Link href="/help" className="px-2.5 py-2 rounded-full text-white/74 font-[700] text-[13px] hover:bg-white/5 hover:text-white/92 transition-colors">Help</Link>
           <Link href="/safety" className="px-2.5 py-2 rounded-full text-white/74 font-[700] text-[13px] hover:bg-white/5 hover:text-white/92 transition-colors">Safety</Link>
+          <button
+            onClick={handleInstallClick}
+            className="px-2.5 py-2 rounded-full text-white/74 font-[700] text-[13px] hover:bg-white/5 hover:text-white/92 transition-colors flex items-center gap-1.5"
+          >
+            <Download className="w-3.5 h-3.5 text-primary" /> Install app
+          </button>
+          <Link href="/help" className="px-2.5 py-2 rounded-full text-white/74 font-[700] text-[13px] hover:bg-white/5 hover:text-white/92 transition-colors">Help</Link>
           <Link href="/contact" className="px-2.5 py-2 rounded-full text-white/74 font-[700] text-[13px] hover:bg-white/5 hover:text-white/92 transition-colors">Contact</Link>
           
           <div className="ml-2 flex items-center gap-2 border-l border-white/10 pl-4">
             {user ? (
               <>
                 <NotificationCenter />
-                <Link href={isDriverRole ? '/driver/profile' : '/profile'} className="flex items-center gap-2 hover:bg-white/5 p-1 pr-3 rounded-full transition-colors border border-transparent hover:border-white/10">
+                <Link href={userProfileHref} className="flex items-center gap-2 hover:bg-white/5 p-1 pr-3 rounded-full transition-colors border border-transparent hover:border-white/10">
                   <div className="w-8 h-8 rounded-full bg-accent1/20 text-accent1 flex items-center justify-center font-bold text-xs border border-accent1/30">
                     {getInitials(user.name)}
                   </div>
@@ -114,7 +182,7 @@ export default function Navbar() {
         <div className="md:hidden border-t border-white/10 bg-bg0 px-4 py-4 space-y-2 shadow-xl absolute w-full">
           {user ? (
             <>
-              <div className="p-3 bg-white/5 border border-white/10 rounded-glass-md flex items-center gap-3 mb-4">
+              <div className="p-3 bg-white/5 border border-white/10 rounded-glass-md flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-full bg-accent1/20 text-accent1 flex items-center justify-center font-bold text-sm border border-accent1/30">
                   {getInitials(user.name)}
                 </div>
@@ -123,12 +191,28 @@ export default function Navbar() {
                   <div className="text-xs text-white/50">{user.role} Account</div>
                 </div>
               </div>
+
+              <Link
+                href={userHomeHref}
+                onClick={() => setMobileOpen(false)}
+                className="block px-4 py-2 text-sm font-bold text-accent1 hover:bg-white/5 rounded-glass-md"
+              >
+                {isDriverRole ? 'Driver Portal' : isAdminRole ? 'Admin Console' : 'Rider Dashboard'}
+              </Link>
+              <Link
+                href={userProfileHref}
+                onClick={() => setMobileOpen(false)}
+                className="block px-4 py-2 text-sm font-bold text-white/80 hover:bg-white/5 rounded-glass-md"
+              >
+                Profile & Settings
+              </Link>
+
               <button
                 onClick={() => {
                   handleLogout();
                   setMobileOpen(false);
                 }}
-                className="w-full text-left px-4 py-2.5 text-xs font-bold text-danger hover:bg-danger/10 rounded-glass-md transition-colors"
+                className="w-full text-left px-4 py-2 text-xs font-bold text-danger hover:bg-danger/10 rounded-glass-md transition-colors"
               >
                 Sign out
               </button>
@@ -152,11 +236,26 @@ export default function Navbar() {
             </>
           )}
           <div className="h-px bg-white/10 my-4"></div>
+          <button
+            onClick={() => {
+              setMobileOpen(false);
+              handleInstallClick();
+            }}
+            className="w-full text-left px-4 py-2 text-sm font-bold text-primary hover:bg-white/5 rounded-glass-md flex items-center gap-2"
+          >
+            <Download className="w-4 h-4 text-primary" /> Install App (PWA)
+          </button>
           <Link href="/how-it-works" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-bold text-white/70 hover:bg-white/5 rounded-glass-md">How It Works</Link>
           <Link href="/safety" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-bold text-white/70 hover:bg-white/5 rounded-glass-md">Safety</Link>
           <Link href="/help" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-bold text-white/70 hover:bg-white/5 rounded-glass-md">Help Center</Link>
         </div>
       )}
+
+      <InstallAppModal
+        isOpen={showInstallModal}
+        onClose={() => setShowInstallModal(false)}
+        initialPlatform={installPlatform}
+      />
     </nav>
   );
 }

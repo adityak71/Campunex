@@ -238,7 +238,7 @@ export default function LocationPicker({
         <button
           type="button"
           onClick={() => setShowMapModal(true)}
-          className="text-[12px] font-bold text-accent3 hover:text-accent3 hover:underline flex items-center gap-1 transition-colors"
+          className="text-[12px] font-bold text-accent1 hover:text-purple-300 flex items-center gap-1 transition-colors"
         >
           <MapPin className="w-3.5 h-3.5" /> Pick on Interactive Map
         </button>
@@ -252,30 +252,30 @@ export default function LocationPicker({
           onChange={handleInputChange}
           onFocus={() => setShowDropdown(true)}
           placeholder={placeholder}
-          className="w-full px-3.5 py-[12px] bg-black/[0.18] border border-white/16 rounded-[14px] text-[13px] text-white/90 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/20 transition pr-10 shadow-sm"
+          className="w-full px-3.5 py-[12px] bg-[#090814]/80 border border-white/10 rounded-xl text-[13px] text-white/90 placeholder:text-white/40 focus:outline-none focus:border-accent1/60 focus:ring-2 focus:ring-accent1/20 transition pr-10 shadow-sm"
         />
 
         {loading ? (
-          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 animate-spin h-4 w-4 border-2 border-accent3 border-t-transparent rounded-full" />
+          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 animate-spin h-4 w-4 border-2 border-accent1 border-t-transparent rounded-full" />
         ) : (
           <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
         )}
 
         {/* Categorized Autocomplete Dropdown */}
         {showDropdown && (
-          <div className="absolute z-50 left-0 right-0 mt-1 bg-[#12121e]/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-72 overflow-y-auto">
+          <div className="absolute z-50 left-0 right-0 mt-1 bg-[#100f20]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl shadow-purple-950/60 overflow-hidden max-h-72 overflow-y-auto">
             {/* Current Geolocation Trigger */}
             <button
               type="button"
               onClick={handleCurrentLocation}
-              className="w-full text-left px-3.5 py-2.5 bg-white/10 hover:bg-white/10 transition flex items-center gap-2 border-b border-white/5 text-xs font-bold text-accent3"
+              className="w-full text-left px-3.5 py-2.5 bg-accent1/10 hover:bg-accent1/20 transition flex items-center gap-2 border-b border-white/5 text-xs font-bold text-accent1"
             >
               <Navigation className={`w-3.5 h-3.5 ${geoLoading ? 'animate-spin' : ''}`} />
               <span>{geoLoading ? 'Acquiring GPS Fix...' : 'Use Current Device GPS Location'}</span>
             </button>
 
             {/* Campus Locations Category */}
-            <div className="px-3.5 py-1.5 bg-white/5 text-[10px] font-extrabold text-accent3 uppercase tracking-wider border-b border-white/5">
+            <div className="px-3.5 py-1.5 bg-white/5 text-[10px] font-extrabold text-accent1 uppercase tracking-wider border-b border-white/5">
               Campus Locations
             </div>
             {PRESET_LOCATIONS.filter((loc) => loc.category === 'CAMPUS').map((loc, idx) => (
@@ -339,12 +339,12 @@ export default function LocationPicker({
 
       {/* Auto-Fetched Coordinates Pill */}
       {lat && lng && !error && (
-        <div className="flex items-center justify-between bg-black/20 px-3 py-1.5 rounded-[12px] border border-white/5 text-[11px] backdrop-blur-sm">
-          <span className="text-accent3 font-bold flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent3 animate-pulse shadow-[0_0_8px_rgba(14,165,233,0.8)]"></span>
+        <div className="flex items-center justify-between bg-accent1/[0.08] border border-accent1/20 px-3 py-1.5 rounded-xl text-[11px] backdrop-blur-sm">
+          <span className="text-accent1 font-bold flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent1 animate-pulse shadow-[0_0_8px_rgba(181,108,255,0.8)]"></span>
             Verified Bounds: <strong className="font-mono text-white/90 font-normal tracking-wide">{lat}° N, {lng}° E</strong>
           </span>
-          <span className="text-white/30 text-[10px] font-bold">LPU Region</span>
+          <span className="text-white/40 text-[10px] font-bold">LPU Region</span>
         </div>
       )}
 

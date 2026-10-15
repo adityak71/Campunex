@@ -3,6 +3,7 @@ import { verifyToken, JwtPayload } from '../../utils/jwt.js';
 import { redis } from '../../config/redis.js';
 import { pool } from '../../config/db.js';
 import { LocationUpdatePayload } from '@campunex/shared';
+import { createAndEmitNotification, notifyAdmins } from '../../utils/notifications.js';
 
 export function initializeWebSocketHandlers(io: Server): void {
   // Authentication Middleware for WebSocket Connections
@@ -94,6 +95,29 @@ export function initializeWebSocketHandlers(io: Server): void {
           return;
         }
 
+        // Strict RBAC: Verify driver owns this trip and trip is active
+        const tripCheck = await pool.query(
+          `SELECT driver_id, status FROM trips WHERE id = $1;`,
+          [tripId]
+        );
+
+        if (tripCheck.rows.length === 0) {
+          socket.emit('trip:error', { message: 'Trip not found' });
+          return;
+        }
+
+        const trip = tripCheck.rows[0];
+        const driverId = user.userId || (user as any).id;
+        if (trip.driver_id !== driverId) {
+          socket.emit('trip:error', { message: 'Unauthorized: You are not the driver of this trip' });
+          return;
+        }
+
+        if (!['STARTED', 'IN_PROGRESS', 'OTP_PENDING'].includes(trip.status)) {
+          socket.emit('trip:error', { message: `Cannot broadcast GPS: Trip is in ${trip.status} state` });
+          return;
+        }
+
         // Cache latest driver location in Redis for instant retrieval
         await redis.hset(`trip:location:${tripId}`, {
           lat: latitude.toString(),
@@ -129,6 +153,108 @@ export function initializeWebSocketHandlers(io: Server): void {
         });
       } catch (err) {
         socket.emit('trip:error', { message: 'Failed to sync trip state' });
+      }
+    });
+
+    // 5. Emergency SOS Trigger (Strict Role-Isolated + Admin Alerts)
+    socket.on('trip:sos', async (data: { tripId: string; reason?: string }) => {
+      try {
+        const { tripId, reason } = data;
+        if (!tripId) return;
+
+        const currentUserId = user.userId || (user as any).id;
+        const tripRes = await pool.query(
+          'SELECT id, driver_id, rider_id, status FROM trips WHERE id = $1;',
+          [tripId]
+        );
+
+        if (tripRes.rows.length === 0) {
+          socket.emit('trip:error', { message: 'Trip not found' });
+          return;
+        }
+
+        const trip = tripRes.rows[0];
+        if (trip.driver_id !== currentUserId && trip.rider_id !== currentUserId) {
+          socket.emit('trip:error', { message: 'Unauthorized: Not a trip participant' });
+          return;
+        }
+
+        // Broadcast urgent SOS alert to the trip room
+        io.to(`trip:${tripId}`).emit('trip:sos_alert', {
+          tripId,
+          triggeredBy: user.email,
+          role: user.role,
+          reason: reason || 'Emergency assistance requested',
+          timestamp: new Date().toISOString(),
+        });
+
+        // Notify the OTHER participant
+        const isRiderReporter = trip.rider_id === currentUserId;
+        const otherPartyId = isRiderReporter ? trip.driver_id : trip.rider_id;
+        const otherPartyRole = isRiderReporter ? 'DRIVER' : 'RIDER';
+
+        await createAndEmitNotification({
+          recipient_id: otherPartyId,
+          recipient_role: otherPartyRole,
+          event_type: 'SOS_EMERGENCY_TRIGGERED',
+          entity_type: 'TRIP',
+          entity_id: tripId,
+          category: 'SAFETY',
+          title: '🚨 EMERGENCY: SOS Alert Triggered',
+          message: `The ${user.role.toLowerCase()} triggered an emergency SOS alert. Campus authorities have been notified.`,
+          priority: 'CRITICAL',
+          action_type: 'VIEW_TRIP',
+          action_url: `/trip/${tripId}`,
+        });
+
+        // Notify all platform admins immediately
+        await notifyAdmins({
+          event_type: 'SOS_EMERGENCY_TRIGGERED',
+          entity_type: 'TRIP',
+          entity_id: tripId,
+          category: 'SAFETY',
+          title: `🚨 CRITICAL: SOS Emergency on Trip #${tripId.slice(0, 8)}`,
+          message: `SOS triggered by ${user.role} (${user.email}) on active trip #${tripId.slice(0, 8)}. Reason: ${reason || 'Urgent Intervention Needed'}.`,
+          priority: 'CRITICAL',
+          action_type: 'ADMIN_EMERGENCY',
+          action_url: `/admin`,
+        });
+      } catch (err) {
+        console.error('Failed to process SOS trigger:', err);
+      }
+    });
+
+    // 6. Driver Proximity Notification (Driver Approaching Pickup Landmark)
+    socket.on('trip:driver_proximity', async (data: { tripId: string }) => {
+      try {
+        const { tripId } = data;
+        if (!tripId || user.role !== 'DRIVER') return;
+
+        const currentUserId = user.userId || (user as any).id;
+        const tripRes = await pool.query(
+          'SELECT id, rider_id, status FROM trips WHERE id = $1 AND driver_id = $2;',
+          [tripId, currentUserId]
+        );
+
+        if (tripRes.rows.length === 0) return;
+        const trip = tripRes.rows[0];
+
+        // Notify rider
+        await createAndEmitNotification({
+          recipient_id: trip.rider_id,
+          recipient_role: 'RIDER',
+          event_type: 'DRIVER_APPROACHING',
+          entity_type: 'TRIP',
+          entity_id: tripId,
+          category: 'TRIP',
+          title: 'Driver Approaching Pickup Point',
+          message: 'Your driver is within 500m of the pickup landmark. Please prepare for departure.',
+          priority: 'HIGH',
+          action_type: 'TRACK_TRIP',
+          action_url: `/trip/${tripId}`,
+        });
+      } catch (err) {
+        console.error('Failed to emit proximity notification:', err);
       }
     });
 

@@ -22,10 +22,25 @@ import { HealthCheckResponse } from '@campunex/shared';
 const app = express();
 const server = http.createServer(app);
 
+// Allowed CORS Origins (supports comma-separated URLs and Vercel preview domains)
+const allowedOrigins = (config.clientUrl || 'http://localhost:3000')
+  .split(',')
+  .map((u) => u.trim().replace(/\/$/, ''));
+
+const isOriginAllowed = (origin: string | undefined): boolean => {
+  if (!origin) return true;
+  const clean = origin.replace(/\/$/, '');
+  if (allowedOrigins.includes('*') || allowedOrigins.includes(clean)) return true;
+  if (allowedOrigins.some((o) => o.includes('vercel.app')) && clean.endsWith('.vercel.app')) return true;
+  return false;
+};
+
 // Socket.IO Server Setup
 export const io = new SocketIOServer(server, {
   cors: {
-    origin: config.clientUrl,
+    origin: (origin, callback) => {
+      callback(null, isOriginAllowed(origin));
+    },
     credentials: true,
   },
 });
@@ -37,7 +52,13 @@ initializeWebSocketHandlers(io);
 app.use(helmet());
 app.use(
   cors({
-    origin: config.clientUrl,
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
   })
 );

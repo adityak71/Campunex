@@ -81,6 +81,21 @@ export async function initiateStartOtp(driverId: string, tripId: string): Promis
       type: 'START',
       otp,
     });
+
+    // Notify rider to share OTP with driver (Rule 5: No plaintext OTP in notification message!)
+    await createAndEmitNotification({
+      recipient_id: riderId,
+      recipient_role: 'RIDER',
+      event_type: 'START_OTP_READY',
+      entity_type: 'TRIP',
+      entity_id: tripId,
+      category: 'TRIP',
+      title: 'Driver Arrived — Start Ride OTP',
+      message: 'Your driver has arrived at the pickup landmark. Please share your start OTP from the trip screen with the driver to start the ride.',
+      priority: 'HIGH',
+      action_type: 'SHOW_OTP',
+      action_url: `/trip/${tripId}`,
+    });
   }
 
   io.to(`trip:${tripId}`).emit('trip:status_change', {
@@ -137,6 +152,21 @@ export async function processStartOtpVerification(
     });
   }
 
+  // Notify driver trip started
+  await createAndEmitNotification({
+    recipient_id: driverId,
+    recipient_role: 'DRIVER',
+    event_type: 'TRIP_STARTED',
+    entity_type: 'TRIP',
+    entity_id: tripId,
+    category: 'TRIP',
+    title: 'Trip Started — Driving in Progress',
+    message: 'Start OTP successfully verified. Navigate safely along the verified campus route.',
+    priority: 'HIGH',
+    action_type: 'VIEW_RIDE',
+    action_url: `/driver/rides`,
+  });
+
   // Broadcast status update to trip room
   io.to(`trip:${tripId}`).emit('trip:status_change', {
     tripId,
@@ -183,6 +213,21 @@ export async function initiateCompletionOtp(
       tripId,
       type: 'COMPLETION',
       otp,
+    });
+
+    // Notify rider of completion OTP readiness (Rule 5: No plaintext OTP in notification message)
+    await createAndEmitNotification({
+      recipient_id: riderIdComp,
+      recipient_role: 'RIDER',
+      event_type: 'COMPLETION_OTP_READY',
+      entity_type: 'TRIP',
+      entity_id: tripId,
+      category: 'TRIP',
+      title: 'Approaching Destination — Completion OTP',
+      message: 'You have arrived at your drop-off landmark. Please share your completion OTP with the driver to conclude the ride.',
+      priority: 'HIGH',
+      action_type: 'SHOW_OTP',
+      action_url: `/trip/${tripId}`,
     });
   }
 
@@ -306,8 +351,8 @@ export async function markRiderNoShow(driverId: string, rideRequestId: string): 
   }
 
   const trip = tripRes.rows[0];
-  if (['COMPLETED', 'CANCELLED'].includes(trip.status)) {
-    throw new Error(`Cannot mark no-show for a trip in ${trip.status} state`);
+  if (['STARTED', 'IN_PROGRESS', 'COMPLETION_PENDING', 'COMPLETED', 'CANCELLED'].includes(trip.status)) {
+    throw new Error(`Cannot mark no-show for a trip in ${trip.status} state: Passenger has already boarded and trip is active or finished.`);
   }
 
   const client = await pool.connect();
@@ -330,6 +375,39 @@ export async function markRiderNoShow(driverId: string, rideRequestId: string): 
     await client.query('UPDATE rides SET available_seats = available_seats + 1 WHERE id = $1;', [
       trip.ride_id,
     ]);
+
+    // Role-isolated notifications
+    const tripRiderRes = await client.query('SELECT rider_id FROM trips WHERE id = $1;', [trip.id]);
+    const tripRiderId = tripRiderRes.rows[0]?.rider_id;
+    if (tripRiderId) {
+      await createAndEmitNotification({
+        recipient_id: tripRiderId,
+        recipient_role: 'RIDER',
+        event_type: 'RIDE_CANCELLED_NO_SHOW',
+        entity_type: 'TRIP',
+        entity_id: trip.id,
+        category: 'TRIP',
+        title: 'Booking Cancelled — Marked as No-Show',
+        message: 'The driver arrived at the pickup landmark and recorded a no-show. The seat was released.',
+        priority: 'HIGH',
+        action_type: 'FIND_RIDES',
+        action_url: '/rides/find',
+      });
+    }
+
+    await createAndEmitNotification({
+      recipient_id: driverId,
+      recipient_role: 'DRIVER',
+      event_type: 'RIDER_NO_SHOW_RECORDED',
+      entity_type: 'TRIP',
+      entity_id: trip.id,
+      category: 'TRIP',
+      title: 'Passenger Marked No-Show',
+      message: 'Passenger was marked as a no-show. 1 seat has been restored to your route.',
+      priority: 'NORMAL',
+      action_type: 'VIEW_RIDE',
+      action_url: `/driver/rides/${trip.ride_id}`,
+    });
 
     await client.query('COMMIT');
   } catch (err) {

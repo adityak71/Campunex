@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
@@ -10,60 +10,89 @@ import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Modal from '../../../components/ui/Modal';
 import { useToast } from '../../../components/ui/Toast';
+import { apiRequest } from '../../../lib/api';
 import { Building, Plus, Search, CheckCircle, Trash2, Power } from 'lucide-react';
 
-const INITIAL_UNIVS = [
-  { id: 'u1', name: 'Lovely Professional University', domain: 'lpu.in', users: 2341, status: 'ACTIVE' },
-  { id: 'u2', name: 'IIT Delhi', domain: 'iitd.ac.in', users: 3012, status: 'ACTIVE' },
-  { id: 'u3', name: 'BITS Pilani', domain: 'bits-pilani.ac.in', users: 1876, status: 'ACTIVE' },
-  { id: 'u4', name: 'Delhi University', domain: 'du.ac.in', users: 4521, status: 'ACTIVE' },
-  { id: 'u5', name: 'Manipal University', domain: 'manipal.edu', users: 1234, status: 'ACTIVE' },
-  { id: 'u6', name: 'State College Campus', domain: 'college.edu', users: 987, status: 'ACTIVE' },
-];
-
 export default function AdminUniversitiesPage() {
-  const [univs, setUnivs] = useState(INITIAL_UNIVS);
+  const [univs, setUnivs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDomain, setNewDomain] = useState('');
   const { showToast } = useToast();
 
-  const handleAddUniversity = (e: React.FormEvent) => {
+  const loadInstitutions = async () => {
+    try {
+      setLoading(true);
+      const res = await apiRequest('/admin/institutions');
+      setUnivs(res.institutions || []);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to load universities', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadInstitutions();
+  }, []);
+
+  const handleAddUniversity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName || !newDomain) return;
 
-    const newUniv = {
-      id: `u${Date.now()}`,
-      name: newName,
-      domain: newDomain.toLowerCase().replace('@', ''),
-      users: 0,
-      status: 'ACTIVE',
-    };
+    try {
+      const cleanDomain = newDomain.toLowerCase().replace('@', '').trim();
+      const res = await apiRequest('/admin/institutions', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: newName.trim(),
+          email_domain: cleanDomain,
+          verification_enabled: true,
+        }),
+      });
 
-    setUnivs((prev) => [newUniv, ...prev]);
-    setShowAddModal(false);
-    setNewName('');
-    setNewDomain('');
-    showToast(`Added ${newName} (@${newUniv.domain}) to permitted domains`, 'success');
+      setUnivs((prev) => [res.institution, ...prev]);
+      setShowAddModal(false);
+      setNewName('');
+      setNewDomain('');
+      showToast(`Added ${newName} (@${cleanDomain}) to permitted domains`, 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to add university domain', 'error');
+    }
   };
 
-  const handleToggleStatus = (id: string) => {
-    setUnivs((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, status: u.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE' } : u))
-    );
-    showToast('Campus domain status updated', 'info');
+  const handleToggleStatus = async (id: string, currentEnabled: boolean) => {
+    try {
+      const res = await apiRequest(`/admin/institutions/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ verification_enabled: !currentEnabled }),
+      });
+      setUnivs((prev) =>
+        prev.map((u) => (u.id === id ? { ...u, verification_enabled: !currentEnabled } : u))
+      );
+      showToast('Campus domain status updated', 'info');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update campus domain', 'error');
+    }
   };
 
-  const handleDeleteUniv = (id: string) => {
-    setUnivs((prev) => prev.filter((u) => u.id !== id));
-    showToast('Removed campus domain permission', 'error');
+  const handleDeleteUniv = async (id: string) => {
+    if (!confirm('Are you sure you want to remove this university domain?')) return;
+    try {
+      await apiRequest(`/admin/institutions/${id}`, { method: 'DELETE' });
+      setUnivs((prev) => prev.filter((u) => u.id !== id));
+      showToast('Removed campus domain permission', 'info');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to delete campus domain', 'error');
+    }
   };
 
   const filtered = univs.filter(
     (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.domain.toLowerCase().includes(search.toLowerCase())
+      u.name?.toLowerCase().includes(search.toLowerCase()) ||
+      u.email_domain?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -130,40 +159,56 @@ export default function AdminUniversitiesPage() {
                 <tr>
                   <th className="p-3">Institution Name</th>
                   <th className="p-3">Email Domain</th>
-                  <th className="p-3">Registered Users</th>
                   <th className="p-3">Status</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filtered.map((univ) => (
-                  <tr key={univ.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
-                    <td className="p-3 font-bold text-slate-900 dark:text-slate-100">{univ.name}</td>
-                    <td className="p-3 font-mono text-slate-600 dark:text-slate-400">@{univ.domain}</td>
-                    <td className="p-3 font-bold text-[#1e3a8a] dark:text-cyan-400">{univ.users.toLocaleString()}</td>
-                    <td className="p-3">
-                      <Badge variant={univ.status === 'ACTIVE' ? 'success' : 'danger'}>
-                        {univ.status}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-right space-x-2">
-                      <button
-                        onClick={() => handleToggleStatus(univ.id)}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        title="Toggle Status"
-                      >
-                        <Power className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteUniv(univ.id)}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        title="Delete Domain"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                {loading ? (
+                  <tr>
+                    <td colSpan={4} className="p-8 text-center text-slate-500">
+                      Loading campus domains...
                     </td>
                   </tr>
-                ))}
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="p-8 text-center text-slate-500">
+                      No matching university domains configured yet.
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((univ) => {
+                    const domain = univ.email_domain || univ.domain;
+                    const isEnabled = univ.verification_enabled !== false;
+                    return (
+                      <tr key={univ.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
+                        <td className="p-3 font-bold text-slate-900 dark:text-slate-100">{univ.name}</td>
+                        <td className="p-3 font-mono text-slate-600 dark:text-slate-400">@{domain}</td>
+                        <td className="p-3">
+                          <Badge variant={isEnabled ? 'success' : 'danger'}>
+                            {isEnabled ? 'ACTIVE' : 'DISABLED'}
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-right space-x-2">
+                          <button
+                            onClick={() => handleToggleStatus(univ.id, isEnabled)}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            title={isEnabled ? 'Disable Domain' : 'Enable Domain'}
+                          >
+                            <Power className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUniv(univ.id)}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            title="Delete Domain"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

@@ -615,7 +615,7 @@ export default function DriverOfferPage() {
               </Button>
 
               <Button
-                className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg"
+                className="flex-1 bg-gradient-to-r from-accent1 to-accent2 hover:opacity-90 text-white rounded-xl shadow-lg"
                 size="md"
                 onClick={() => router.push(`/driver/requests?rideId=${publishedRideId}`)}
               >

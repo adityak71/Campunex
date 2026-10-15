@@ -99,29 +99,21 @@ export default function DriverRidesPage() {
   });
 
   return (
-    <WorkspaceLayout mode="driver" title="Active Rides" subtitle="Manage your current and upcoming scheduled routes">
-      <div className="space-y-8 w-full">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="space-y-1">
-            <Badge variant="info">DRIVER COMMUTE DASHBOARD</Badge>
-            <h1 className="text-3xl font-extrabold text-[#1e3a8a] dark:text-cyan-300 tracking-tight mt-1">
-              My Published Rides
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Manage your published routes, inspect rider seat requests, and monitor trip status
-            </p>
-          </div>
-
-          <Link href="/driver/offer">
-            <Button variant="teal" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
-              Offer a Campus Ride
-            </Button>
-          </Link>
-        </div>
-
+    <WorkspaceLayout
+      mode="driver"
+      title="My Published Rides"
+      subtitle="Manage your published routes, inspect rider seat requests, and monitor trip status"
+      actions={
+        <Link href="/driver/offer">
+          <Button variant="primary" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
+            Offer a Campus Ride
+          </Button>
+        </Link>
+      }
+    >
+      <div className="space-y-6 w-full">
         {/* Filter Tabs (Upcoming, Active, Completed, Cancelled, Expired) */}
-        <Card className="p-4">
+        <div className="p-2 border border-white/10 rounded-2xl bg-white/[0.03] backdrop-blur-md">
           <div className="flex flex-wrap gap-2">
             {(['UPCOMING', 'ACTIVE', 'COMPLETED', 'CANCELLED', 'EXPIRED'] as const).map((tab) => (
               <button
@@ -129,20 +121,20 @@ export default function DriverRidesPage() {
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition border ${
                   activeTab === tab
-                    ? 'bg-teal-50 dark:bg-cyan-950 text-teal-700 dark:text-cyan-300 border-teal-300 dark:border-cyan-800 shadow-sm'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                    ? 'bg-accent1/20 text-white border-accent1/40 shadow-sm'
+                    : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 {tab === 'EXPIRED' ? 'EXPIRED (HISTORY)' : tab}
               </button>
             ))}
           </div>
-        </Card>
+        </div>
 
         {/* Error Alert */}
         {error && (
-          <div className="p-4 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-2xl text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+          <div className="p-4 bg-danger/10 border border-danger/20 rounded-2xl text-danger text-xs font-bold flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-danger flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -161,7 +153,7 @@ export default function DriverRidesPage() {
             description="You currently have no published campus rides matching this tab filter."
             action={
               <Link href="/driver/offer">
-                <Button variant="teal" size="sm">Offer Ride Now</Button>
+                <Button variant="primary" size="sm" leftIcon={<Plus className="w-4 h-4" />}>Offer Ride Now</Button>
               </Link>
             }
           />
@@ -170,15 +162,18 @@ export default function DriverRidesPage() {
             {filteredRides.map((ride) => {
               const effectiveStatus = getEffectiveRideStatus(ride);
               return (
-                <Card key={ride.id} hoverable className="p-6 space-y-4">
-                  <div className="flex justify-between items-start">
+                <div
+                  key={ride.id}
+                  className="p-6 space-y-4 rounded-[24px] border border-white/10 bg-gradient-to-br from-[#12121e]/90 to-[#181829]/90 shadow-xl hover:border-accent1/40 transition-all"
+                >
+                  <div className="flex justify-between items-start gap-4">
                     <div className="space-y-1">
-                      <div className="text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        <Navigation2 className="w-4 h-4 text-teal-500 flex-shrink-0" />
+                      <div className="text-base font-extrabold text-white flex items-center gap-2">
+                        <Navigation2 className="w-4 h-4 text-accent1 flex-shrink-0" />
                         <span>{ride.origin_name} ➔ {ride.destination_name}</span>
                       </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5" />
+                      <div className="text-xs text-white/60 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-white/40" />
                         <span>Departure: {formatDepartureTime(ride.departure_time)}</span>
                       </div>
                     </div>
@@ -198,24 +193,24 @@ export default function DriverRidesPage() {
                     </Badge>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <div>Vehicle: <strong>Campus Vehicle</strong></div>
-                    <div>Available Seats: <strong className="text-teal-600 dark:text-teal-400">{ride.available_seats} / {ride.total_seats} Seats</strong></div>
-                    <div>Passenger Requests: <strong className="text-[#1e3a8a] dark:text-cyan-400">{requestCounts[ride.id] || 0} Request(s)</strong></div>
-                    <div>Proximity: <strong>500m Match Engine</strong></div>
+                  <div className="grid grid-cols-2 gap-3 text-xs bg-white/[0.04] p-3.5 rounded-xl border border-white/5 text-white/80">
+                    <div>Vehicle: <strong className="text-white">Campus Vehicle</strong></div>
+                    <div>Available Seats: <strong className="text-accent3">{ride.available_seats} / {ride.total_seats} Seats</strong></div>
+                    <div>Passenger Requests: <strong className="text-accent1">{requestCounts[ride.id] || 0} Request(s)</strong></div>
+                    <div>Proximity: <strong className="text-white/90">500m Match Engine</strong></div>
                   </div>
 
                   <div className="pt-2 flex justify-between items-center">
-                    <span className="text-xs text-slate-400 font-mono text-[10px]">
+                    <span className="text-xs text-white/40 font-mono text-[11px]">
                       Created: {formatDepartureTime(ride.created_at)}
                     </span>
                     <Link href={`/driver/rides/${ride.id}`}>
-                      <Button variant="teal" size="sm" rightIcon={<ChevronRight className="w-4 h-4" />}>
+                      <Button variant="primary" size="sm" rightIcon={<ChevronRight className="w-4 h-4" />}>
                         Manage Ride Details
                       </Button>
                     </Link>
                   </div>
-                </Card>
+                </div>
               );
             })}
           </div>

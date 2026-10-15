@@ -11,6 +11,7 @@ import Badge from '../../../components/ui/Badge';
 import Skeleton from '../../../components/ui/Skeleton';
 import EmptyState from '../../../components/ui/EmptyState';
 import Modal from '../../../components/ui/Modal';
+import Input from '../../../components/ui/Input';
 import Map from '../../../components/Map';
 import MatchBar from '../../../components/MatchBar';
 import { useToast } from '../../../components/ui/Toast';
@@ -29,6 +30,7 @@ import {
   MessageSquare,
   XCircle,
   AlertTriangle,
+  AlertCircle,
   Send
 } from 'lucide-react';
 
@@ -47,6 +49,11 @@ export default function RideDetailsPage() {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Cancellation OTP state for accepted bookings
+  const [cancelOtp, setCancelOtp] = useState('');
+  const [cancelOtpSent, setCancelOtpSent] = useState(false);
+  const [cancelOtpLoading, setCancelOtpLoading] = useState(false);
 
   const [customOfferNote, setCustomOfferNote] = useState('');
   const { showToast } = useToast();
@@ -112,16 +119,43 @@ export default function RideDetailsPage() {
     }
   };
 
+  const handleRequestCancelOtp = async () => {
+    if (!existingRequest?.id) return;
+    try {
+      setCancelOtpLoading(true);
+      const res = await apiRequest(`/rides/requests/${existingRequest.id}/cancel-otp`, { method: 'POST' });
+      setCancelOtpSent(true);
+      showToast('Cancellation OTP sent to your account.', 'success');
+      if (res.otp) {
+        setCancelOtp(res.otp);
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to generate cancellation OTP', 'error');
+    } finally {
+      setCancelOtpLoading(false);
+    }
+  };
+
   const handleCancelRequest = async () => {
+    if (existingRequest?.status === 'ACCEPTED' && !cancelOtp.trim()) {
+      showToast('Please enter the 4-digit cancellation OTP to proceed.', 'error');
+      return;
+    }
+
     setShowCancelModal(false);
     setActionLoading(true);
 
     try {
       if (existingRequest?.id) {
-        await apiRequest(`/rides/requests/${existingRequest.id}/cancel`, { method: 'PATCH' });
+        await apiRequest(`/rides/requests/${existingRequest.id}/cancel`, {
+          method: 'PATCH',
+          body: JSON.stringify({ otp: cancelOtp.trim() || undefined }),
+        });
       }
       setExistingRequest(null);
-      showToast('Ride request cancelled successfully', 'info');
+      setCancelOtp('');
+      setCancelOtpSent(false);
+      showToast('Ride booking cancelled successfully', 'info');
     } catch (err: any) {
       showToast(`Cancel failed: ${err.message}`, 'error');
     } finally {
@@ -197,20 +231,31 @@ export default function RideDetailsPage() {
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="w-5 h-5 text-teal-600 flex-shrink-0" />
                 <div>
-                  <div className="text-xs font-bold text-teal-900 dark:text-teal-200">Ride request sent</div>
+                  <div className="text-xs font-bold text-teal-900 dark:text-teal-200">
+                    {existingRequest.status === 'ACCEPTED' ? 'Booking Confirmed' : 'Ride Request Sent'}
+                  </div>
                   <div className="text-[11px] text-teal-700 dark:text-teal-300">
-                    Status: <strong>Pending Driver Response</strong>
+                    Status: <strong>{existingRequest.status === 'ACCEPTED' ? 'Accepted & Confirmed Seat' : 'Pending Driver Response'}</strong>
                   </div>
                 </div>
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowCancelModal(true)}
-              >
-                Cancel Pending Request
-              </Button>
+              <div className="flex items-center gap-2">
+                {existingRequest.status === 'ACCEPTED' && (existingRequest.trip_id || existingRequest.tripId) && (
+                  <Link href={`/trip/${existingRequest.trip_id || existingRequest.tripId}`}>
+                    <Button variant="teal" size="sm">
+                      View Live Trip
+                    </Button>
+                  </Link>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCancelModal(true)}
+                >
+                  {existingRequest.status === 'ACCEPTED' ? 'Cancel Confirmed Booking' : 'Cancel Pending Request'}
+                </Button>
+              </div>
             </div>
           )}
 
@@ -392,22 +437,66 @@ export default function RideDetailsPage() {
         {/* CANCEL CONFIRMATION MODAL */}
         <Modal
           isOpen={showCancelModal}
-          onClose={() => setShowCancelModal(false)}
-          title="Cancel Pending Ride Request?"
+          onClose={() => {
+            setShowCancelModal(false);
+            setCancelOtp('');
+            setCancelOtpSent(false);
+          }}
+          title={existingRequest?.status === 'ACCEPTED' ? 'Cancel Confirmed Ride Booking?' : 'Cancel Pending Ride Request?'}
         >
           <div className="space-y-4 text-xs">
             <p className="text-slate-600 dark:text-slate-400">
-              Are you sure you want to cancel your pending seat request for <strong>{ride.origin_name} ➔ {ride.destination_name}</strong>?
+              {existingRequest?.status === 'ACCEPTED'
+                ? `You have an accepted and confirmed seat for ${ride.origin_name} ➔ ${ride.destination_name}. Are you sure you want to cancel your booking?`
+                : `Are you sure you want to cancel your pending seat request for ${ride.origin_name} ➔ ${ride.destination_name}?`}
             </p>
+
+            {existingRequest?.status === 'ACCEPTED' && (
+              <div className="p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-xl space-y-3">
+                <div className="flex items-center gap-2 text-rose-400 font-bold">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>Mandatory Security OTP Required</span>
+                </div>
+                <p className="text-[11px] text-white/70">
+                  Your seat is confirmed with the driver. Cancellation of confirmed bookings requires a 4-digit security OTP to prevent unauthorized cancellations. Click below to generate your code.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRequestCancelOtp}
+                    isLoading={cancelOtpLoading}
+                  >
+                    {cancelOtpSent ? 'Resend OTP' : 'Request Cancellation OTP'}
+                  </Button>
+                </div>
+                {cancelOtpSent && (
+                  <div className="space-y-1 pt-1">
+                    <label className="text-[11px] font-bold text-white/80">Enter 4-Digit Cancellation OTP</label>
+                    <Input
+                      placeholder="Enter 4-digit code"
+                      maxLength={4}
+                      value={cancelOtp}
+                      onChange={(e) => setCancelOtp(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowCancelModal(false)}
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancelOtp('');
+                  setCancelOtpSent(false);
+                }}
                 className="flex-1"
               >
-                Keep Request
+                Keep Booking
               </Button>
               <Button
                 variant="danger"

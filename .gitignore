@@ -1,14 +1,75 @@
-node_modules
-dist
-.next
-out
-build
-*.log
+# ==============================================================================
+# Campunex Monorepo - Git Ignore Configuration
+# ==============================================================================
+
+# Node Dependencies
+node_modules/
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build Outputs & Compilation Artifacts
+dist/
+build/
+out/
+.next/
+*.tsbuildinfo
+next-env.d.ts.bak
+
+# Monorepo Caching & Deployment Tooling
+.turbo/
+.vercel/
+
+# Environment Variables & Sensitive Secrets (NEVER commit these)
 .env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+apps/server/.env
+apps/server/.env.*
+apps/web/.env
+apps/web/.env.*
+packages/*/.env
+packages/*/.env.*
+
+# Keep example template files tracked in Git
+!.env.example
+!apps/server/.env.example
+!apps/web/.env.example
+
+# Logs & Diagnostics
+logs/
+*.log
+
+# Unit Tests & Coverage
+coverage/
+.nyc_output/
+
+# Docker Local Volume Data
+docker-data/
+*.sqlite
+*.sqlite3
+
+# Operating System Files
 .DS_Store
-coverage
-docker-data
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# IDE & Code Editor Configurations
+.idea/
+*.swp
+*.swo
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json

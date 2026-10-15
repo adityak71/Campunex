@@ -1,4 +1,7 @@
 import { pool } from '../../config/db.js';
+import { redis } from '../../config/redis.js';
+import { generate4DigitOtp, hashOtp } from '../otp/otp.service.js';
+import { io } from '../../server.js';
 import { pointToWkt, lineStringToWkt } from '../../utils/postgis.js';
 import { createAndEmitNotification } from '../../utils/notifications.js';
 import { GeoPoint, Ride } from '@campunex/shared';
@@ -184,6 +187,55 @@ export async function getDriverRides(driverId: string): Promise<Ride[]> {
   }
 }
 
+export async function getRideById(rideId: string): Promise<any> {
+  const query = `
+    SELECT 
+      r.id,
+      r.driver_id,
+      r.origin_name,
+      r.destination_name,
+      COALESCE(ST_Y(r.origin_geom::geometry), 31.2536) AS origin_lat,
+      COALESCE(ST_X(r.origin_geom::geometry), 75.7037) AS origin_lng,
+      COALESCE(ST_Y(r.destination_geom::geometry), 31.3260) AS destination_lat,
+      COALESCE(ST_X(r.destination_geom::geometry), 75.5762) AS destination_lng,
+      ST_AsGeoJSON(r.route_geometry) AS route_geometry,
+      r.departure_time,
+      r.total_seats,
+      r.available_seats,
+      r.status,
+      r.created_at,
+      r.updated_at,
+      u.name AS driver_name,
+      u.verification_status AS driver_verification_status
+    FROM rides r
+    JOIN users u ON r.driver_id = u.id
+    WHERE r.id = $1;
+  `;
+  const res = await pool.query(query, [rideId]);
+  if (res.rows.length === 0) {
+    throw new Error('Ride not found');
+  }
+
+  const row = res.rows[0];
+  return {
+    id: row.id,
+    driver_id: row.driver_id,
+    driver_name: row.driver_name,
+    driver_verified: row.driver_verification_status === 'VERIFIED',
+    origin_name: row.origin_name,
+    destination_name: row.destination_name,
+    origin: { latitude: parseFloat(row.origin_lat), longitude: parseFloat(row.origin_lng) },
+    destination: { latitude: parseFloat(row.destination_lat), longitude: parseFloat(row.destination_lng) },
+    route_geometry: row.route_geometry,
+    departure_time: new Date(row.departure_time).toISOString(),
+    total_seats: row.total_seats,
+    available_seats: row.available_seats,
+    status: row.status,
+    created_at: new Date(row.created_at).toISOString(),
+    updated_at: new Date(row.updated_at).toISOString(),
+  };
+}
+
 export async function requestRide(data: {
   riderId: string;
   rideId: string;
@@ -349,10 +401,19 @@ export async function updateRideRequestStatus(data: {
         throw new Error('Cannot accept request: No available seats remaining');
       }
 
-      // Decrement seats atomically
-      await client.query('UPDATE rides SET available_seats = available_seats - 1 WHERE id = $1;', [
-        reqInfo.ride_id,
-      ]);
+      // Decrement seats atomically and update ride status if full (prevents negative seats)
+      const updateSeatsRes = await client.query(
+        `UPDATE rides 
+         SET available_seats = available_seats - 1,
+             status = CASE WHEN available_seats - 1 <= 0 THEN 'FULL' ELSE status END
+         WHERE id = $1 AND available_seats > 0
+         RETURNING available_seats;`,
+        [reqInfo.ride_id]
+      );
+
+      if (updateSeatsRes.rowCount === 0) {
+        throw new Error('Seat concurrency conflict: No available seats remaining');
+      }
 
       // Update request status
       await client.query('UPDATE ride_requests SET status = \'ACCEPTED\' WHERE id = $1;', [
@@ -377,12 +438,29 @@ export async function updateRideRequestStatus(data: {
         entity_type: 'TRIP',
         entity_id: tripId,
         category: 'REQUEST',
-        title: 'Driver Accepted Your Request!',
+        title: 'Ride Request Accepted!',
         message: 'Your seat booking has been accepted. A live trip tracking room is now active.',
         priority: 'HIGH',
         action_type: 'VIEW_TRIP',
         action_url: tripId ? `/trip/${tripId}` : `/rides/requests`,
       });
+
+      // If ride is now fully booked, notify the driver
+      if (updateSeatsRes.rows[0]?.available_seats === 0) {
+        await createAndEmitNotification({
+          recipient_id: driverId,
+          recipient_role: 'DRIVER',
+          event_type: 'RIDE_FULL',
+          entity_type: 'RIDE',
+          entity_id: reqInfo.ride_id,
+          category: 'RIDE',
+          title: 'Ride Fully Booked!',
+          message: 'All available seats on your published route have been booked.',
+          priority: 'NORMAL',
+          action_type: 'VIEW_RIDE',
+          action_url: `/driver/rides/${reqInfo.ride_id}`,
+        });
+      }
 
       await client.query('COMMIT');
       return { requestStatus: 'ACCEPTED', trip: tripRes.rows[0] };
@@ -415,4 +493,393 @@ export async function updateRideRequestStatus(data: {
   } finally {
     client.release();
   }
+}
+
+export async function initiateRideRequestCancelOtp(data: {
+  riderId: string;
+  requestId: string;
+}): Promise<{ message: string; otp: string }> {
+  const { riderId, requestId } = data;
+
+  const reqRes = await pool.query(
+    `SELECT req.id, req.rider_id, req.status, r.origin_name, r.destination_name
+     FROM ride_requests req
+     JOIN rides r ON req.ride_id = r.id
+     WHERE req.id = $1;`,
+    [requestId]
+  );
+
+  if (reqRes.rows.length === 0) {
+    throw new Error('Ride request not found');
+  }
+
+  const reqInfo = reqRes.rows[0];
+  if (reqInfo.rider_id !== riderId) {
+    throw new Error('Unauthorized: You can only request cancellation OTP for your own bookings');
+  }
+
+  if (reqInfo.status !== 'ACCEPTED') {
+    throw new Error('Cancellation OTP is only required for accepted bookings');
+  }
+
+  // Generate 4-digit OTP
+  const otp = generate4DigitOtp();
+  const hash = hashOtp(otp);
+  const redisKey = `otp:cancel_request:${requestId}`;
+  await redis.setex(redisKey, 300, hash); // 5 minutes TTL
+
+  // Send via WebSocket to rider's room
+  io.to(`user:${riderId}`).emit('trip:cancellation_otp', {
+    requestId,
+    otp,
+    message: 'Your 4-digit cancellation verification code',
+  });
+
+  return { message: 'Cancellation OTP generated and sent to your account', otp };
+}
+
+export async function initiateRideCancelOtp(data: {
+  driverId: string;
+  rideId: string;
+}): Promise<{ message: string; otp?: string; otpRequired: boolean }> {
+  const { driverId, rideId } = data;
+
+  const rideRes = await pool.query(
+    `SELECT id, driver_id, status FROM rides WHERE id = $1;`,
+    [rideId]
+  );
+
+  if (rideRes.rows.length === 0) {
+    throw new Error('Ride not found');
+  }
+
+  const ride = rideRes.rows[0];
+  if (ride.driver_id !== driverId) {
+    throw new Error('Unauthorized: You can only cancel your own rides');
+  }
+
+  // Check if ride has accepted riders
+  const acceptedCountRes = await pool.query(
+    `SELECT COUNT(*)::int AS count FROM ride_requests WHERE ride_id = $1 AND status = 'ACCEPTED';`,
+    [rideId]
+  );
+  const hasAcceptedRiders = (acceptedCountRes.rows[0]?.count ?? 0) > 0;
+
+  if (!hasAcceptedRiders) {
+    return { message: 'No accepted riders on this ride; OTP not required', otpRequired: false };
+  }
+
+  const otp = generate4DigitOtp();
+  const hash = hashOtp(otp);
+  const redisKey = `otp:cancel_ride:${rideId}`;
+  await redis.setex(redisKey, 300, hash);
+
+  io.to(`user:${driverId}`).emit('trip:cancellation_otp', {
+    rideId,
+    otp,
+    message: 'Your 4-digit ride cancellation verification code',
+  });
+
+  return { message: 'Cancellation OTP generated and sent to your account', otp, otpRequired: true };
+}
+
+export async function cancelRideRequest(data: {
+  riderId: string;
+  requestId: string;
+  otp?: string;
+}): Promise<any> {
+  const { riderId, requestId, otp } = data;
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const reqRes = await client.query(
+      `SELECT req.id, req.ride_id, req.rider_id, req.status, r.driver_id, r.total_seats
+       FROM ride_requests req
+       JOIN rides r ON req.ride_id = r.id
+       WHERE req.id = $1 FOR UPDATE;`,
+      [requestId]
+    );
+
+    if (reqRes.rows.length === 0) {
+      throw new Error('Ride request not found');
+    }
+
+    const reqInfo = reqRes.rows[0];
+
+    if (reqInfo.rider_id !== riderId) {
+      throw new Error('Unauthorized: You can only cancel your own booking requests');
+    }
+
+    if (reqInfo.status === 'CANCELLED') {
+      await client.query('ROLLBACK');
+      return { message: 'Request is already cancelled' };
+    }
+
+    // Check associated trip state - cannot cancel if already in transit
+    const tripRes = await client.query(
+      `SELECT id, status FROM trips WHERE ride_request_id = $1;`,
+      [requestId]
+    );
+    const associatedTrip = tripRes.rows[0];
+    if (associatedTrip && ['STARTED', 'IN_PROGRESS', 'COMPLETION_PENDING', 'COMPLETED'].includes(associatedTrip.status)) {
+      throw new Error(`Cannot cancel ride booking: The trip is already ${associatedTrip.status.toLowerCase()} in transit.`);
+    }
+
+    // If it was already accepted, require cancellation OTP!
+    if (reqInfo.status === 'ACCEPTED') {
+      if (!otp || !otp.trim()) {
+        throw new Error('Cancellation OTP is required to cancel an accepted ride booking. Please request a cancellation OTP first.');
+      }
+
+      const redisKey = `otp:cancel_request:${requestId}`;
+      const storedHash = await redis.get(redisKey);
+      if (!storedHash) {
+        throw new Error('Cancellation OTP has expired or was not requested. Please click "Request Cancellation OTP".');
+      }
+
+      const submittedHash = hashOtp(otp.trim());
+      if (submittedHash !== storedHash) {
+        throw new Error('Invalid cancellation OTP code. Please enter the correct 4-digit code.');
+      }
+
+      await redis.del(redisKey);
+
+      // Release seat back to ride atomically
+      await client.query(
+        `UPDATE rides 
+         SET available_seats = LEAST(total_seats, available_seats + 1),
+             status = CASE WHEN status = 'FULL' THEN 'SCHEDULED' ELSE status END
+         WHERE id = $1;`,
+        [reqInfo.ride_id]
+      );
+
+      // Cancel associated trip if active
+      await client.query(
+        `UPDATE trips SET status = 'CANCELLED', updated_at = NOW() WHERE ride_request_id = $1;`,
+        [requestId]
+      );
+    }
+
+    await client.query(
+      `UPDATE ride_requests SET status = 'CANCELLED' WHERE id = $1;`,
+      [requestId]
+    );
+
+    // Notify driver about cancellation
+    await createAndEmitNotification({
+      recipient_id: reqInfo.driver_id,
+      recipient_role: 'DRIVER',
+      event_type: 'RIDE_REQUEST_CANCELLED',
+      entity_type: 'RIDE',
+      entity_id: reqInfo.ride_id,
+      category: 'REQUEST',
+      title: 'Passenger Cancelled Booking',
+      message: 'A passenger has cancelled their seat request. A seat has been reopened.',
+      priority: 'NORMAL',
+      action_type: 'VIEW_RIDE',
+      action_url: `/driver/rides/${reqInfo.ride_id}`,
+    });
+
+    await client.query('COMMIT');
+    return { success: true, message: 'Ride request cancelled successfully' };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function cancelRide(data: {
+  driverId: string;
+  rideId: string;
+  otp?: string;
+}): Promise<any> {
+  const { driverId, rideId, otp } = data;
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const rideRes = await client.query(
+      `SELECT id, driver_id, status FROM rides WHERE id = $1 FOR UPDATE;`,
+      [rideId]
+    );
+
+    if (rideRes.rows.length === 0) {
+      throw new Error('Ride not found');
+    }
+
+    const ride = rideRes.rows[0];
+
+    if (ride.driver_id !== driverId) {
+      throw new Error('Unauthorized: You can only cancel your own published rides');
+    }
+
+    if (ride.status === 'COMPLETED' || ride.status === 'CANCELLED') {
+      throw new Error(`Cannot cancel a ride that is already ${ride.status.toLowerCase()}`);
+    }
+
+    // Check if any trip is currently active in transit
+    const activeTripsRes = await client.query(
+      `SELECT id FROM trips WHERE ride_id = $1 AND status IN ('STARTED', 'IN_PROGRESS', 'COMPLETION_PENDING');`,
+      [rideId]
+    );
+    if (activeTripsRes.rows.length > 0) {
+      throw new Error('Cannot cancel ride: A trip is currently active in transit. Please complete the trip with the passenger.');
+    }
+
+    // Check if ride has any accepted riders
+    const acceptedCountRes = await client.query(
+      `SELECT COUNT(*)::int AS count FROM ride_requests WHERE ride_id = $1 AND status = 'ACCEPTED';`,
+      [rideId]
+    );
+    const hasAcceptedRiders = (acceptedCountRes.rows[0]?.count ?? 0) > 0;
+
+    if (hasAcceptedRiders) {
+      if (!otp || !otp.trim()) {
+        throw new Error('Cancellation OTP is required to cancel a ride with accepted passengers. Please request a cancellation OTP first.');
+      }
+      const redisKey = `otp:cancel_ride:${rideId}`;
+      const storedHash = await redis.get(redisKey);
+      if (!storedHash) {
+        throw new Error('Cancellation OTP has expired or was not requested. Please request a new OTP.');
+      }
+      const submittedHash = hashOtp(otp.trim());
+      if (submittedHash !== storedHash) {
+        throw new Error('Invalid cancellation OTP code.');
+      }
+      await redis.del(redisKey);
+    }
+
+    // Mark ride cancelled
+    await client.query(
+      `UPDATE rides SET status = 'CANCELLED', updated_at = NOW() WHERE id = $1;`,
+      [rideId]
+    );
+
+    // Cancel all accepted trips
+    await client.query(
+      `UPDATE trips SET status = 'CANCELLED', updated_at = NOW() WHERE ride_id = $1 AND status != 'COMPLETED';`,
+      [rideId]
+    );
+
+    // Find all affected riders to notify them
+    const affectedRiders = await client.query(
+      `SELECT rider_id FROM ride_requests WHERE ride_id = $1 AND status IN ('REQUESTED', 'ACCEPTED');`,
+      [rideId]
+    );
+
+    // Cancel all open or accepted requests
+    await client.query(
+      `UPDATE ride_requests SET status = 'CANCELLED' WHERE ride_id = $1 AND status IN ('REQUESTED', 'ACCEPTED');`,
+      [rideId]
+    );
+
+    await client.query('COMMIT');
+
+    // Notify all affected riders
+    for (const r of affectedRiders.rows) {
+      createAndEmitNotification({
+        recipient_id: r.rider_id,
+        recipient_role: 'RIDER',
+        event_type: 'RIDE_CANCELLED_BY_DRIVER',
+        entity_type: 'RIDE',
+        entity_id: rideId,
+        category: 'RIDE',
+        title: 'Ride Cancelled by Driver',
+        message: 'The driver had to cancel this scheduled ride. Please explore alternate rides.',
+        priority: 'HIGH',
+        action_type: 'FIND_RIDES',
+        action_url: '/rides/find',
+      }).catch(console.error);
+    }
+
+    return { success: true, message: 'Ride cancelled successfully' };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function updateRideSeats(data: {
+  driverId: string;
+  rideId: string;
+  totalSeats: number;
+}): Promise<any> {
+  const { driverId, rideId, totalSeats } = data;
+
+  const rideRes = await pool.query(
+    `SELECT id, driver_id, total_seats, available_seats, status FROM rides WHERE id = $1;`,
+    [rideId]
+  );
+
+  if (rideRes.rows.length === 0) {
+    throw new Error('Ride not found');
+  }
+
+  const ride = rideRes.rows[0];
+  if (ride.driver_id !== driverId) {
+    throw new Error('Unauthorized: You can only update seats for your own rides');
+  }
+
+  const bookedSeats = ride.total_seats - ride.available_seats;
+  if (totalSeats < bookedSeats) {
+    throw new Error(`Cannot set seats lower than already confirmed bookings (${bookedSeats})`);
+  }
+
+  const newAvailable = totalSeats - bookedSeats;
+  const newStatus = newAvailable === 0 ? 'FULL' : ride.status === 'FULL' ? 'SCHEDULED' : ride.status;
+
+  const updateRes = await pool.query(
+    `UPDATE rides 
+     SET total_seats = $1, available_seats = $2, status = $3, updated_at = NOW() 
+     WHERE id = $4
+     RETURNING id, total_seats, available_seats, status;`,
+    [totalSeats, newAvailable, newStatus, rideId]
+  );
+
+  // If newly filled, notify driver
+  if (newAvailable === 0) {
+    createAndEmitNotification({
+      recipient_id: driverId,
+      recipient_role: 'DRIVER',
+      event_type: 'RIDE_FULL',
+      entity_type: 'RIDE',
+      entity_id: rideId,
+      category: 'RIDE',
+      title: 'Ride Fully Booked!',
+      message: 'All seats on your route have been booked. Ride is now marked full.',
+      priority: 'NORMAL',
+      action_type: 'VIEW_RIDE',
+      action_url: `/driver/rides/${rideId}`,
+    });
+  }
+
+  // Notify all confirmed riders of ride configuration change
+  const ridersRes = await pool.query(
+    `SELECT DISTINCT rider_id FROM ride_requests WHERE ride_id = $1 AND status = 'ACCEPTED';`,
+    [rideId]
+  );
+  for (const r of ridersRes.rows) {
+    createAndEmitNotification({
+      recipient_id: r.rider_id,
+      recipient_role: 'RIDER',
+      event_type: 'RIDE_UPDATED',
+      entity_type: 'RIDE',
+      entity_id: rideId,
+      category: 'RIDE',
+      title: 'Ride Details Updated',
+      message: 'Your driver has updated the seat availability for this scheduled commute.',
+      priority: 'NORMAL',
+      action_type: 'FIND_RIDES',
+      action_url: `/rides/find`,
+    });
+  }
+
+  return updateRes.rows[0];
 }

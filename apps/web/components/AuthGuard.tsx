@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { apiRequest } from '../lib/api';
 import Modal from './ui/Modal';
 import Button from './ui/Button';
+import { ShieldAlert, ArrowRight, LogOut } from 'lucide-react';
 
 const PUBLIC_ROUTES = [
   '/',
@@ -23,14 +24,16 @@ const PUBLIC_ROUTES = [
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  
+
   const [loading, setLoading] = useState(false);
   const [unauthorizedMessage, setUnauthorizedMessage] = useState<string | null>(null);
+  const [targetDashboard, setTargetDashboard] = useState<string>('/dashboard');
+  const [targetLabel, setTargetLabel] = useState<string>('Go to My Dashboard');
   const [authorized, setAuthorized] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    // If we're on a public route, just render children immediately
+    // 1. If public route, render immediately without blocking
     const isPublic = PUBLIC_ROUTES.includes(pathname) || pathname.startsWith('/verify');
     if (isPublic) {
       setAuthorized(true);
@@ -47,45 +50,101 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
       setLoading(true);
       try {
-        // We fetch /me to ensure token is valid and get the absolute source of truth for the role
         const { user } = await apiRequest('/auth/me');
         if (!user) throw new Error('No user data');
-        
-        const role = user.role.toUpperCase();
+
+        const role = (user.role || 'RIDER').toUpperCase();
         setUserRole(role);
 
-        // RBAC Check
-        if (pathname.startsWith('/driver')) {
-          if (role !== 'DRIVER') {
-            setUnauthorizedMessage("You can't access this option. You are not authorized to use this feature. Only Drivers can access this area.");
-            setLoading(false);
+        // Determine home dashboard based on authoritative role
+        const roleHome = role === 'DRIVER' ? '/driver' : role === 'ADMIN' ? '/admin' : '/dashboard';
+        const roleHomeLabel = role === 'DRIVER' ? 'Go to Driver Portal' : role === 'ADMIN' ? 'Go to Admin Console' : 'Go to Rider Dashboard';
+        setTargetDashboard(roleHome);
+        setTargetLabel(roleHomeLabel);
+
+        // 2. Seamless role-specific shortcuts
+        if (role === 'DRIVER') {
+          if (pathname === '/rides/create') {
+            router.replace('/driver/offer');
             return;
           }
-        } else if (pathname.startsWith('/rides')) {
-          if (role !== 'RIDER') {
-            setUnauthorizedMessage("You can't access this option. You are not authorized to use this feature. Only Riders can access this area.");
-            setLoading(false);
-            return;
-          }
-        } else if (pathname.startsWith('/admin')) {
-          if (role !== 'ADMIN') {
-            setUnauthorizedMessage("You can't access this option. You are not authorized to use this feature. Only Administrators can access this area.");
-            setLoading(false);
-            return;
-          }
-        } else if (pathname === '/dashboard') {
-          if (role === 'DRIVER') {
-            router.replace('/driver');
-            return;
-          } else if (role === 'ADMIN') {
-            router.replace('/admin');
+          if (pathname === '/profile') {
+            router.replace('/driver/profile');
             return;
           }
         }
 
+        // 3. Strict RBAC URL validations
+        if (role === 'RIDER') {
+          if (pathname.startsWith('/driver')) {
+            setUnauthorizedMessage("You can't access this option. You are logged in with a Rider account, and Driver tools are restricted to verified drivers.");
+            setAuthorized(false);
+            setLoading(false);
+            return;
+          }
+          if (pathname.startsWith('/trip/') && (pathname.endsWith('/start') || pathname.endsWith('/complete'))) {
+            setUnauthorizedMessage("You can't access OTP verification controls. Starting and completing trips via OTP is strictly restricted to the vehicle's driver.");
+            setTargetDashboard(pathname.replace(/\/start$|\/complete$/, ''));
+            setTargetLabel('Return to Trip Tracking');
+            setAuthorized(false);
+            setLoading(false);
+            return;
+          }
+          if (pathname.startsWith('/admin')) {
+            setUnauthorizedMessage("You can't access this option. Campus administration and platform oversight tools are restricted to Administrators only.");
+            setAuthorized(false);
+            setLoading(false);
+            return;
+          }
+        } else if (role === 'DRIVER') {
+          if (pathname === '/dashboard') {
+            setUnauthorizedMessage("You can't access the Rider Dashboard. You are logged in as a Driver with dedicated ride publishing, requests, and route management portals.");
+            setAuthorized(false);
+            setLoading(false);
+            return;
+          }
+          if (pathname.startsWith('/rides') && !pathname.startsWith('/rides/alerts')) {
+            setUnauthorizedMessage("You can't access Rider ride search and seat request options. Drivers publish routes and manage passenger requests from the Driver portal.");
+            setAuthorized(false);
+            setLoading(false);
+            return;
+          }
+          if (pathname === '/trips') {
+            setUnauthorizedMessage("The '/trips' view is configured for riders. As a driver, you can track and manage your journeys in 'My Rides'.");
+            setTargetDashboard('/driver/rides');
+            setTargetLabel('Go to My Rides');
+            setAuthorized(false);
+            setLoading(false);
+            return;
+          }
+          if (pathname === '/history') {
+            setUnauthorizedMessage("The '/history' view is for rider commutes. As a driver, your trip history is tracked in 'Driver History'.");
+            setTargetDashboard('/driver/history');
+            setTargetLabel('Go to Driver History');
+            setAuthorized(false);
+            setLoading(false);
+            return;
+          }
+          if (pathname.startsWith('/admin')) {
+            setUnauthorizedMessage("You can't access this option. Campus administration is restricted to Administrators only.");
+            setAuthorized(false);
+            setLoading(false);
+            return;
+          }
+        } else if (role === 'ADMIN') {
+          if (pathname === '/dashboard' || pathname.startsWith('/driver') || pathname.startsWith('/rides') || pathname === '/trips' || pathname === '/history') {
+            setUnauthorizedMessage("You are logged in as a Campus Administrator. Standard commuter operations are separated from platform administration.");
+            setAuthorized(false);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Access authorized
+        setUnauthorizedMessage(null);
         setAuthorized(true);
       } catch (error) {
-        console.error("AuthGuard check failed:", error);
+        console.error('AuthGuard check failed:', error);
         localStorage.removeItem('campunex_token');
         router.push('/login');
       } finally {
@@ -96,30 +155,53 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     checkAccess();
   }, [pathname, router]);
 
+  const handleDismissModal = () => {
+    setUnauthorizedMessage(null);
+    router.push(targetDashboard);
+  };
+
+  const handleSwitchAccount = () => {
+    localStorage.removeItem('campunex_token');
+    setUnauthorizedMessage(null);
+    router.push('/login');
+  };
+
   if (unauthorizedMessage) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a]">
+      <div className="min-h-screen bg-[#0c0b17] flex items-center justify-center p-4">
         <Modal
           isOpen={true}
-          onClose={() => {
-            setUnauthorizedMessage(null);
-            router.push('/');
-          }}
-          title="Unauthorized Access"
+          onClose={handleDismissModal}
+          title="Access Restricted (RBAC Policy)"
         >
-          <div className="space-y-4 text-center">
-            <p className="text-slate-600 dark:text-slate-300 font-medium">
-              {unauthorizedMessage}
-            </p>
-            <div className="flex justify-center pt-4">
+          <div className="space-y-6 text-center py-2">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-danger/10 border border-danger/20 flex items-center justify-center text-danger">
+              <ShieldAlert className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-[800] text-white">Unauthorized Option</h3>
+              <p className="text-white/70 text-sm leading-relaxed max-w-md mx-auto">
+                {unauthorizedMessage}
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
               <Button
                 variant="primary"
-                onClick={() => {
-                  setUnauthorizedMessage(null);
-                  router.push('/');
-                }}
+                onClick={handleDismissModal}
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+                className="w-full sm:w-auto"
               >
-                Back to Home
+                {targetLabel}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleSwitchAccount}
+                leftIcon={<LogOut className="w-4 h-4" />}
+                className="w-full sm:w-auto text-white/70 hover:text-white"
+              >
+                Sign In with Different Role
               </Button>
             </div>
           </div>
@@ -130,15 +212,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (!authorized && !PUBLIC_ROUTES.includes(pathname) && !pathname.startsWith('/verify')) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent3"></div>
+      <div className="min-h-screen bg-[#0c0b17] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent1"></div>
       </div>
     );
   }
 
-  return (
-    <>
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }

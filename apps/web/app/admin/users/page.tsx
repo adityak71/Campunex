@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
@@ -8,33 +8,56 @@ import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
+import Skeleton from '../../../components/ui/Skeleton';
 import { useToast } from '../../../components/ui/Toast';
+import { apiRequest } from '../../../lib/api';
 import { Users, Search, ShieldCheck, UserCheck } from 'lucide-react';
 
-const INITIAL_USERS = [
-  { id: 'usr-1', name: 'Demo Driver', email: 'driver@lpu.in', role: 'DRIVER', status: 'VERIFIED', institution: 'Lovely Professional University' },
-  { id: 'usr-2', name: 'Demo Rider', email: 'rider@lpu.in', role: 'RIDER', status: 'VERIFIED', institution: 'Lovely Professional University' },
-  { id: 'usr-3', name: 'Alex Morgan', email: 'alex@iitd.ac.in', role: 'RIDER', status: 'VERIFIED', institution: 'IIT Delhi' },
-  { id: 'usr-4', name: 'Samantha Reed', email: 'samantha@du.ac.in', role: 'DRIVER', status: 'PENDING', institution: 'Delhi University' },
-  { id: 'usr-5', name: 'Rahul Sharma', email: 'rahul@bits.ac.in', role: 'RIDER', status: 'VERIFIED', institution: 'BITS Pilani' },
-];
-
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState(INITIAL_USERS);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const { showToast } = useToast();
 
-  const handleToggleVerification = (id: string) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, status: u.status === 'VERIFIED' ? 'PENDING' : 'VERIFIED' } : u))
-    );
-    showToast('User verification status updated', 'info');
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await apiRequest('/admin/users');
+      setUsers(res.users || []);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to load platform users', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const handleToggleVerification = async (id: string, currentStatus: string) => {
+    const nextStatus = currentStatus === 'VERIFIED' ? 'PENDING' : 'VERIFIED';
+    try {
+      await apiRequest(`/admin/users/${id}/verification`, {
+        method: 'PATCH',
+        body: JSON.stringify({ verification_status: nextStatus }),
+      });
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === id ? { ...u, verification_status: nextStatus, status: nextStatus } : u
+        )
+      );
+      showToast(`User verification set to ${nextStatus}`, 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update verification status', 'error');
+    }
   };
 
   const filtered = users.filter(
     (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase())
+      u.name?.toLowerCase().includes(search.toLowerCase()) ||
+      u.email?.toLowerCase().includes(search.toLowerCase()) ||
+      u.role?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -97,28 +120,48 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filtered.map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
-                    <td className="p-3 font-bold text-slate-900 dark:text-slate-100">{user.name}</td>
-                    <td className="p-3 font-mono text-slate-600 dark:text-slate-400">{user.email}</td>
-                    <td className="p-3"><Badge variant="info">{user.role}</Badge></td>
-                    <td className="p-3 text-slate-600 dark:text-slate-400">{user.institution}</td>
-                    <td className="p-3">
-                      <Badge variant={user.status === 'VERIFIED' ? 'verified' : 'warning'}>
-                        {user.status}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-right">
-                      <Button
-                        onClick={() => handleToggleVerification(user.id)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        Toggle Verify
-                      </Button>
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-slate-500">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-accent1 animate-ping"></span>
+                        Loading verified directory...
+                      </div>
                     </td>
                   </tr>
-                ))}
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-slate-500">
+                      No matching campus members found.
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((user) => {
+                    const status = user.verification_status || user.status || 'PENDING';
+                    return (
+                      <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
+                        <td className="p-3 font-bold text-slate-900 dark:text-slate-100">{user.name}</td>
+                        <td className="p-3 font-mono text-slate-600 dark:text-slate-400">{user.email}</td>
+                        <td className="p-3"><Badge variant="info">{user.role}</Badge></td>
+                        <td className="p-3 text-slate-600 dark:text-slate-400">{user.institution || '—'}</td>
+                        <td className="p-3">
+                          <Badge variant={status === 'VERIFIED' ? 'verified' : 'warning'}>
+                            {status}
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-right">
+                          <Button
+                            onClick={() => handleToggleVerification(user.id, status)}
+                            variant="outline"
+                            size="sm"
+                          >
+                            {status === 'VERIFIED' ? 'Revoke Verify' : 'Approve Verify'}
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

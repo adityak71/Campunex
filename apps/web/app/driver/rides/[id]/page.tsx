@@ -12,6 +12,7 @@ import Badge from '../../../../components/ui/Badge';
 import Skeleton from '../../../../components/ui/Skeleton';
 import EmptyState from '../../../../components/ui/EmptyState';
 import Modal from '../../../../components/ui/Modal';
+import Input from '../../../../components/ui/Input';
 import { useToast } from '../../../../components/ui/Toast';
 import { apiRequest } from '../../../../lib/api';
 import { formatDepartureTime } from '../../../../lib/formatters';
@@ -23,6 +24,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  AlertCircle,
   ArrowLeft,
   ShieldCheck,
   Ban
@@ -42,6 +44,9 @@ export default function DriverRideDetailsPage() {
   const [selectedReq, setSelectedReq] = useState<{ id: string; action: 'ACCEPTED' | 'REJECTED' } | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [cancelOtp, setCancelOtp] = useState('');
+  const [cancelOtpSent, setCancelOtpSent] = useState(false);
+  const [cancelOtpLoading, setCancelOtpLoading] = useState(false);
 
   const { showToast } = useToast();
 
@@ -110,12 +115,37 @@ export default function DriverRideDetailsPage() {
     }
   };
 
+  const handleRequestCancelOtp = async () => {
+    try {
+      setCancelOtpLoading(true);
+      const res = await apiRequest(`/rides/${rideId}/cancel-otp`, { method: 'POST' });
+      setCancelOtpSent(true);
+      showToast('Cancellation OTP sent to your account.', 'success');
+      if (res.otp) {
+        setCancelOtp(res.otp);
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to generate cancellation OTP', 'error');
+    } finally {
+      setCancelOtpLoading(false);
+    }
+  };
+
   const handleConfirmCancelRide = async () => {
+    const hasAcceptedRiders = requests.some((r) => r.status === 'ACCEPTED');
+    if (hasAcceptedRiders && !cancelOtp.trim()) {
+      showToast('Please enter the 4-digit cancellation OTP to proceed.', 'error');
+      return;
+    }
+
     setShowCancelModal(false);
     setActionLoading(true);
 
     try {
-      // Mark local ride status as CANCELLED or notify backend
+      await apiRequest(`/rides/${rideId}/cancel`, {
+        method: 'PATCH',
+        body: JSON.stringify({ otp: cancelOtp.trim() || undefined }),
+      });
       setRide((prev: any) => (prev ? { ...prev, status: 'CANCELLED' } : prev));
       showToast('Ride cancelled successfully.', 'info');
       router.push('/driver/rides');
@@ -128,7 +158,7 @@ export default function DriverRideDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans">
+      <div className="min-h-screen min-h-screen text-white flex flex-col font-sans">
         <Navbar />
         <main className="max-w-4xl mx-auto px-4 py-8 flex-1 space-y-6 w-full">
           <Skeleton className="h-28 w-full" />
@@ -141,7 +171,7 @@ export default function DriverRideDetailsPage() {
 
   if (error || !ride) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans">
+      <div className="min-h-screen min-h-screen text-white flex flex-col font-sans">
         <Navbar />
         <main className="max-w-md mx-auto px-4 py-16 flex-1 text-center space-y-4">
           <EmptyState
@@ -165,7 +195,7 @@ export default function DriverRideDetailsPage() {
   const destPoint = { latitude: parseFloat(ride.destination?.latitude || ride.destination_lat || '31.3260'), longitude: parseFloat(ride.destination?.longitude || ride.destination_lng || '75.5762') };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen min-h-screen text-white flex flex-col font-sans transition-colors duration-200">
       <Navbar />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-8 w-full">
@@ -173,7 +203,7 @@ export default function DriverRideDetailsPage() {
         <div className="space-y-4">
           <Link
             href="/driver/rides"
-            className="text-xs font-bold text-slate-500 hover:text-teal-600 dark:hover:text-cyan-400 flex items-center gap-1 transition"
+            className="text-xs font-bold text-slate-500 hover:text-accent1 flex items-center gap-1 transition"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Back to My Published Rides
           </Link>
@@ -181,7 +211,7 @@ export default function DriverRideDetailsPage() {
           <Card className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-extrabold text-[#1e3a8a] dark:text-cyan-300">
+                <h1 className="text-2xl font-extrabold text-white">
                   {ride.origin_name} ➔ {ride.destination_name}
                 </h1>
                 <Badge variant={ride.status === 'COMPLETED' ? 'success' : ride.status === 'CANCELLED' ? 'danger' : 'verified'}>
@@ -222,17 +252,17 @@ export default function DriverRideDetailsPage() {
         {/* Details Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="space-y-3 p-5 text-xs">
-            <h3 className="font-bold text-[#1e3a8a] dark:text-cyan-300 border-b border-slate-100 dark:border-slate-800 pb-2">
+            <h3 className="font-bold text-white border-b border-slate-100 dark:border-slate-800 pb-2">
               🚗 Vehicle & Seat Capacity
             </h3>
             <div>Vehicle: <strong>Campus Vehicle</strong></div>
             <div>Total Seat Capacity: <strong>{ride.total_seats} Total Seats</strong></div>
-            <div>Available Passenger Seats: <strong className="text-teal-600 dark:text-teal-400">{ride.available_seats} Seats Remaining</strong></div>
+            <div>Available Passenger Seats: <strong className="text-accent3">{ride.available_seats} Seats Remaining</strong></div>
             <div>Verification: <strong>.edu Campus Verified</strong></div>
           </Card>
 
           <Card className="space-y-3 p-5 text-xs">
-            <h3 className="font-bold text-[#1e3a8a] dark:text-cyan-300 border-b border-slate-100 dark:border-slate-800 pb-2">
+            <h3 className="font-bold text-white border-b border-slate-100 dark:border-slate-800 pb-2">
               🛡️ Route Security & Proximity
             </h3>
             <div>Proximity Threshold: <strong>Within 500 meters</strong></div>
@@ -245,8 +275,8 @@ export default function DriverRideDetailsPage() {
         {/* Current Incoming Requests Section */}
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-bold text-[#1e3a8a] dark:text-cyan-300 flex items-center gap-2">
-              <Users className="w-5 h-5 text-teal-600 dark:text-cyan-400" /> Incoming Passenger Requests ({requests.length})
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-accent1" /> Incoming Passenger Requests ({requests.length})
             </h2>
           </div>
 
@@ -260,7 +290,7 @@ export default function DriverRideDetailsPage() {
               {requests.map((req) => (
                 <Card key={req.id} hoverable className="flex items-center justify-between p-5">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 flex items-center justify-center font-bold text-sm">
+                    <div className="w-10 h-10 rounded-full bg-accent1/20 text-accent1 border border-accent1/30 flex items-center justify-center font-bold text-sm">
                       {req.rider_name ? req.rider_name.substring(0, 2).toUpperCase() : 'RD'}
                     </div>
                     <div>
@@ -280,7 +310,7 @@ export default function DriverRideDetailsPage() {
                       <>
                         <Button
                           onClick={() => setSelectedReq({ id: req.id, action: 'ACCEPTED' })}
-                          variant="teal"
+                          variant="primary"
                           size="sm"
                         >
                           ✓ Accept Request
@@ -300,7 +330,7 @@ export default function DriverRideDetailsPage() {
                         </Badge>
                         {req.status === 'ACCEPTED' && req.trip_id && (
                           <Link href={`/trip/${req.trip_id}`}>
-                            <Button variant="teal" size="sm">
+                            <Button variant="primary" size="sm">
                               Go to Trip
                             </Button>
                           </Link>
@@ -336,7 +366,7 @@ export default function DriverRideDetailsPage() {
                 Cancel
               </Button>
               <Button
-                variant={selectedReq?.action === 'ACCEPTED' ? 'teal' : 'danger'}
+                variant={selectedReq?.action === 'ACCEPTED' ? 'primary' : 'danger'}
                 size="sm"
                 onClick={handleConfirmRequestAction}
                 isLoading={actionLoading}
@@ -356,8 +386,43 @@ export default function DriverRideDetailsPage() {
         >
           <div className="space-y-4 text-xs">
             <p className="text-slate-600 dark:text-slate-400">
-              Are you sure you want to cancel this ride from <strong>{ride.origin_name}</strong> to <strong>{ride.destination_name}</strong>? This action cannot be undone.
+              Are you sure you want to cancel this ride from <strong>{ride?.origin_name}</strong> to <strong>{ride?.destination_name}</strong>? This action cannot be undone.
             </p>
+
+            {requests.some((r) => r.status === 'ACCEPTED') && (
+              <div className="p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-xl space-y-3">
+                <div className="flex items-center gap-2 text-rose-400 font-bold">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>Mandatory Security OTP Required</span>
+                </div>
+                <p className="text-[11px] text-white/70">
+                  This ride has confirmed passenger bookings. Cancellation without OTP is strictly prohibited. Click below to generate your 4-digit verification code.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRequestCancelOtp}
+                    isLoading={cancelOtpLoading}
+                  >
+                    {cancelOtpSent ? 'Resend OTP' : 'Request Cancellation OTP'}
+                  </Button>
+                </div>
+                {cancelOtpSent && (
+                  <div className="space-y-1 pt-1">
+                    <label className="text-[11px] font-bold text-white/80">Enter 4-Digit Cancellation OTP</label>
+                    <Input
+                      placeholder="Enter 4-digit code"
+                      maxLength={4}
+                      value={cancelOtp}
+                      onChange={(e) => setCancelOtp(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { sendContactEmail } from '../../utils/mailer.js';
+import { notifyAdmins } from '../../utils/notifications.js';
 
 export async function handleContactSupport(req: Request, res: Response): Promise<void> {
   try {
@@ -9,6 +10,20 @@ export async function handleContactSupport(req: Request, res: Response): Promise
       res.status(400).json({ error: 'All fields (name, email, issueType, message) are required' });
       return;
     }
+
+    // Notify administrators about the filed dispute or support report
+    notifyAdmins({
+      event_type: 'SAFETY_REPORT_FILED',
+      category: 'SAFETY',
+      title: `Dispute / Support Report: ${issueType}`,
+      message: `${name} (${email}) submitted an issue regarding "${issueType}": ${message.slice(0, 100)}`,
+      priority:
+        issueType.toLowerCase().includes('safety') || issueType.toLowerCase().includes('emergency')
+          ? 'CRITICAL'
+          : 'HIGH',
+      action_type: 'VIEW_REPORTS',
+      action_url: '/admin',
+    }).catch(console.error);
 
     try {
       // Call mailer utility to send the message

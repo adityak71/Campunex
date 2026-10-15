@@ -8,11 +8,18 @@ const router = Router();
 router.get('/', authenticate, async (req: any, res: Response) => {
   try {
     const userId = req.user?.userId || req.user?.id;
-    const requestedRole = (req.query.role as string)?.toUpperCase() || req.user?.role;
+    const userRole = (req.user?.role || 'RIDER').toUpperCase();
+
+    // Strict RBAC: Non-admin users cannot override or inspect other role notifications
+    let targetRole = userRole;
+    if (userRole === 'ADMIN' && req.query.role) {
+      targetRole = (req.query.role as string).toUpperCase();
+    }
+
     const categoryFilter = (req.query.category as string)?.toUpperCase();
     const filter = (req.query.filter as string)?.toUpperCase();
-    const limit = parseInt(req.query.limit as string) || 50;
-    const offset = parseInt(req.query.offset as string) || 0;
+    const limit = Math.min(100, parseInt(req.query.limit as string) || 50);
+    const offset = Math.max(0, parseInt(req.query.offset as string) || 0);
 
     let query = `
       SELECT id, recipient_id, recipient_role, event_type, entity_type, entity_id, category, title, message, priority, 
@@ -21,7 +28,7 @@ router.get('/', authenticate, async (req: any, res: Response) => {
       WHERE recipient_id = $1 AND (recipient_role = $2 OR recipient_role = 'BOTH')
     `;
 
-    const values: any[] = [userId, requestedRole];
+    const values: any[] = [userId, targetRole];
     let paramIdx = 3;
 
     if (filter === 'UNREAD') {
@@ -39,15 +46,18 @@ router.get('/', authenticate, async (req: any, res: Response) => {
 
     const result = await pool.query(query, values);
 
-    // Unread count calculation
+    // Unread count calculation strictly isolated to current recipient and active role
     const unreadRes = await pool.query(
-      `SELECT COUNT(*)::int AS unread_count FROM notifications WHERE recipient_id = $1 AND (recipient_role = $2 OR recipient_role = 'BOTH') AND is_read = false`,
-      [userId, requestedRole]
+      `SELECT COUNT(*)::int AS unread_count 
+       FROM notifications 
+       WHERE recipient_id = $1 AND (recipient_role = $2 OR recipient_role = 'BOTH') AND is_read = false`,
+      [userId, targetRole]
     );
 
     res.json({
       notifications: result.rows,
       unread_count: unreadRes.rows[0]?.unread_count || 0,
+      role: targetRole,
     });
   } catch (err: any) {
     console.error('Failed to fetch notifications:', err);
@@ -55,7 +65,7 @@ router.get('/', authenticate, async (req: any, res: Response) => {
   }
 });
 
-// PATCH /api/v1/notifications/:id/read - Persist read state server-side
+// PATCH /api/v1/notifications/:id/read - Persist read state server-side with strict recipient validation
 router.patch('/:id/read', authenticate, async (req: any, res: Response) => {
   try {
     const userId = req.user?.userId || req.user?.id;
@@ -70,7 +80,7 @@ router.patch('/:id/read', authenticate, async (req: any, res: Response) => {
     );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Not Found', message: 'Notification not found or ownership denied' });
+      return res.status(404).json({ error: 'Not Found', message: 'Notification not found or access denied' });
     }
 
     res.json({ message: 'Notification marked as read', notification: result.rows[0] });
@@ -80,18 +90,23 @@ router.patch('/:id/read', authenticate, async (req: any, res: Response) => {
   }
 });
 
-// PATCH /api/v1/notifications/read-all - Bulk mark all unread notifications as read
+// PATCH /api/v1/notifications/read-all - Bulk mark unread notifications as read for current user
 router.patch('/read-all', authenticate, async (req: any, res: Response) => {
   try {
     const userId = req.user?.userId || req.user?.id;
-    const requestedRole = (req.query.role as string)?.toUpperCase() || req.user?.role;
+    const userRole = (req.user?.role || 'RIDER').toUpperCase();
+
+    let targetRole = userRole;
+    if (userRole === 'ADMIN' && req.query.role) {
+      targetRole = (req.query.role as string).toUpperCase();
+    }
 
     const result = await pool.query(
       `UPDATE notifications
        SET read_at = NOW(), is_read = true
        WHERE recipient_id = $1 AND (recipient_role = $2 OR recipient_role = 'BOTH') AND is_read = false
        RETURNING id`,
-      [userId, requestedRole]
+      [userId, targetRole]
     );
 
     res.json({ message: 'All notifications marked as read', updated_count: result.rowCount });
@@ -101,7 +116,32 @@ router.patch('/read-all', authenticate, async (req: any, res: Response) => {
   }
 });
 
-// DELETE /api/v1/notifications/:id - Dismiss notification owned by user
+// DELETE /api/v1/notifications/clear-all - Dismiss all notifications for user's active role
+router.delete('/clear-all', authenticate, async (req: any, res: Response) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    const userRole = (req.user?.role || 'RIDER').toUpperCase();
+
+    let targetRole = userRole;
+    if (userRole === 'ADMIN' && req.query.role) {
+      targetRole = (req.query.role as string).toUpperCase();
+    }
+
+    const result = await pool.query(
+      `DELETE FROM notifications 
+       WHERE recipient_id = $1 AND (recipient_role = $2 OR recipient_role = 'BOTH') 
+       RETURNING id`,
+      [userId, targetRole]
+    );
+
+    res.json({ message: 'All notifications cleared', count: result.rowCount });
+  } catch (err: any) {
+    console.error('Failed to clear notifications:', err);
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// DELETE /api/v1/notifications/:id - Dismiss single notification owned by user
 router.delete('/:id', authenticate, async (req: any, res: Response) => {
   try {
     const userId = req.user?.userId || req.user?.id;
@@ -113,7 +153,7 @@ router.delete('/:id', authenticate, async (req: any, res: Response) => {
     );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Not Found', message: 'Notification not found or ownership denied' });
+      return res.status(404).json({ error: 'Not Found', message: 'Notification not found or access denied' });
     }
 
     res.json({ message: 'Notification dismissed' });

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import WorkspaceLayout from '../../../components/layouts/WorkspaceLayout';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
@@ -18,8 +18,11 @@ import {
   CheckCircle2
 } from 'lucide-react';
 
+import { apiRequest } from '../../../lib/api';
+
 export default function NotificationPreferencesPage() {
   const [roleTab, setRoleTab] = useState<'RIDER' | 'DRIVER'>('RIDER');
+  const [userRole, setUserRole] = useState<'RIDER' | 'DRIVER' | 'ADMIN'>('RIDER');
 
   // Rider Preferences
   const [rRideInApp, setRRideInApp] = useState(true);
@@ -41,26 +44,43 @@ export default function NotificationPreferencesPage() {
 
   const { showToast } = useToast();
 
+  useEffect(() => {
+    apiRequest('/auth/me')
+      .then((res) => {
+        if (res.user?.role) {
+          const role = res.user.role.toUpperCase();
+          setUserRole(role);
+          if (role === 'DRIVER') {
+            setRoleTab('DRIVER');
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const handleSavePreferences = () => {
     showToast('Notification preference channels saved successfully!', 'success');
   };
 
-  return (
-    <WorkspaceLayout mode="rider" title="Notification Settings" subtitle="Manage your email and push alert preferences">
-      <div className="space-y-6 w-full">
-        {/* Header */}
-        
+  const layoutMode = (userRole?.toLowerCase() === 'driver'
+    ? 'driver'
+    : userRole?.toLowerCase() === 'admin'
+    ? 'admin'
+    : 'rider') as any;
 
+  return (
+    <WorkspaceLayout mode={layoutMode} title="Notification Settings" subtitle="Manage your email and push alert preferences">
+      <div className="space-y-6 w-full">
         {/* Role Preference Tabs */}
-        <div className="bg-white/5 border border-white/10 rounded-[22px] p-4">
+        <div className="bg-[#12121e]/80 border border-white/10 rounded-[22px] p-4 backdrop-blur-xl">
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setRoleTab('RIDER')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition border ${
                 roleTab === 'RIDER'
-                  ? 'bg-white/5 text-white/80 border-white/10 shadow-sm'
-                  : 'bg-white/5 text-white/60 border-white/10'
+                  ? 'bg-gradient-to-r from-accent1 to-accent3 text-white border-white/20 shadow-lg shadow-purple-950/40'
+                  : 'bg-white/5 text-white/60 border-white/10 hover:text-white'
               }`}
             >
               👤 Rider Notification Channels
@@ -70,8 +90,8 @@ export default function NotificationPreferencesPage() {
               onClick={() => setRoleTab('DRIVER')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition border ${
                 roleTab === 'DRIVER'
-                  ? 'bg-white/5 text-white/80 border-white/10 shadow-sm'
-                  : 'bg-white/5 text-white/60 border-white/10'
+                  ? 'bg-gradient-to-r from-accent1 to-accent3 text-white border-white/20 shadow-lg shadow-purple-950/40'
+                  : 'bg-white/5 text-white/60 border-white/10 hover:text-white'
               }`}
             >
               🚗 Driver Notification Channels
@@ -80,7 +100,7 @@ export default function NotificationPreferencesPage() {
         </div>
 
         {/* Preferences Form Card */}
-        <div className="bg-white/5 border border-white/10 rounded-[22px] p-6 md:p-8 space-y-8">
+        <div className="bg-[#12121e]/80 border border-white/10 rounded-[22px] p-6 md:p-8 space-y-8 backdrop-blur-xl">
           {/* RIDER CHANNELS */}
           {roleTab === 'RIDER' && (
             <div className="space-y-6 text-xs">
@@ -244,10 +264,10 @@ export default function NotificationPreferencesPage() {
           )}
 
           {/* MANDATORY LOCKED SAFETY & SECURITY SECTION */}
-          <div className="p-4 bg-white/5/60 /5/40 border border-white/10 rounded-2xl space-y-3 text-xs">
+          <div className="p-4 bg-white/[0.03] border border-white/10 rounded-2xl space-y-3 text-xs">
             <div className="flex justify-between items-center">
               <div className="font-extrabold text-white flex items-center gap-1.5">
-                <Lock className="w-4 h-4 text-accent3 " /> Mandatory Safety & Critical Security Alerts
+                <Lock className="w-4 h-4 text-accent3" /> Mandatory Safety & Critical Security Alerts
               </div>
               <Badge variant="verified">Always Enabled</Badge>
             </div>

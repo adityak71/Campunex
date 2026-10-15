@@ -327,7 +327,7 @@ export default function DriverDashboardPage() {
               description="You have not published any routes for today. Offer a ride to start receiving rider seat requests."
               action={
                 <Link href="/driver/offer">
-                  <Button variant="teal" size="sm">Offer a Ride</Button>
+                  <Button variant="primary" size="sm">Offer a Ride</Button>
                 </Link>
               }
             />
@@ -343,7 +343,7 @@ export default function DriverDashboardPage() {
                     <div className="flex justify-between items-start">
                       <div className="space-y-1">
                         <div className="font-extrabold text-base text-white/90 flex items-center gap-1.5">
-                          <MapPin className="w-4 h-4 text-teal-400" />
+                          <MapPin className="w-4 h-4 text-accent3" />
                           {ride.origin_name} ➔ {ride.destination_name}
                         </div>
                         <div className="text-xs text-white/50 flex items-center gap-2">
@@ -361,13 +361,13 @@ export default function DriverDashboardPage() {
                     <div className="p-3 bg-white/5 rounded-xl space-y-1 text-xs">
                       <div className="flex justify-between font-bold">
                         <span className="text-white/60">Available Seat Capacity</span>
-                        <span className={isFull ? 'text-rose-400 font-extrabold' : 'text-teal-400 font-extrabold'}>
+                        <span className={isFull ? 'text-rose-400 font-extrabold' : 'text-accent3 font-extrabold'}>
                           {availableSeats} / {totalSeats} seats remaining
                         </span>
                       </div>
                       <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                         <div
-                          className={`h-full transition-all ${isFull ? 'bg-rose-500' : 'bg-teal-500'}`}
+                          className={`h-full transition-all ${isFull ? 'bg-rose-500' : 'bg-accent1'}`}
                           style={{ width: `${((totalSeats - availableSeats) / totalSeats) * 100}%` }}
                         />
                       </div>
