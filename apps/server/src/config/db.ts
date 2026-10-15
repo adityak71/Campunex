@@ -28,8 +28,8 @@ export const pool = new Pool(
       }
 );
 
-pool.on('error', (err) => {
-  console.error('⚠️ PostgreSQL pool idle client error:', err.message);
+pool.on('error', (err: any) => {
+  console.error('⚠️ PostgreSQL pool idle client error:', err?.message || err);
 });
 
 export async function checkDbConnection(): Promise<{ connected: boolean; postgis: boolean }> {

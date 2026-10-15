@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { pool } from '../config/db.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireRole } from '../middleware/rbac.js';
@@ -10,7 +10,7 @@ router.use(authenticate);
 router.use(requireRole('ADMIN'));
 
 // GET /api/v1/admin/institutions - Manage platform institution domain verification list
-router.get('/institutions', async (_req, res: Response) => {
+router.get('/institutions', async (_req: Request, res: Response) => {
   try {
     const result = await pool.query('SELECT * FROM institutions ORDER BY name ASC;');
     res.json({ institutions: result.rows });
@@ -81,7 +81,7 @@ router.delete('/institutions/:id', async (req: any, res: Response) => {
 });
 
 // GET /api/v1/admin/users - Platform user administration with institution details
-router.get('/users', async (_req, res: Response) => {
+router.get('/users', async (_req: Request, res: Response) => {
   try {
     const result = await pool.query(
       `SELECT u.id, u.name, u.email, u.role, u.verification_status, u.created_at, i.name AS institution
@@ -124,7 +124,7 @@ router.patch('/users/:id/verification', async (req: any, res: Response) => {
 });
 
 // GET /api/v1/admin/system - Live platform metrics from database
-router.get('/system', async (_req, res: Response) => {
+router.get('/system', async (_req: Request, res: Response) => {
   try {
     const usersCount = await pool.query('SELECT COUNT(*)::int AS count FROM users;');
     const verifiedUsersCount = await pool.query("SELECT COUNT(*)::int AS count FROM users WHERE verification_status = 'VERIFIED';");

@@ -156,7 +156,7 @@ export async function getDriverRides(driverId: string): Promise<Ride[]> {
 
     const res = await pool.query(query, [driverId]);
 
-    return res.rows.map((row) => {
+    return res.rows.map((row: any) => {
       const depTime = new Date(row.departure_time).getTime();
       const isPastGrace = depTime + 30 * 60 * 1000 < Date.now();
       let effectiveStatus = row.status;

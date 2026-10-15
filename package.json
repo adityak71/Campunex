@@ -17,12 +17,14 @@
     "build:web": "npm run build --workspace=packages/shared && npm run build --workspace=apps/web",
     "start:server": "npm run start --workspace=apps/server",
     "start:web": "npm run start --workspace=apps/web",
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build:shared && npm run build:server",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
   },
-  "devDependencies": {
-    "concurrently": "^8.2.2",
+  "dependencies": {
     "typescript": "^5.4.5"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }

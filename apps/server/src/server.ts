@@ -75,7 +75,7 @@ app.use('/api/v1/support', supportRoutes);
 app.use('/api/v1/dev', devRoutes);
 
 // Health Check Endpoint
-app.get('/health', async (_req, res) => {
+app.get('/health', async (_req: express.Request, res: express.Response) => {
   const dbStatus = await checkDbConnection();
   const redisStatus = await checkRedisConnection();
 

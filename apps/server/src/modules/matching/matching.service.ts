@@ -59,7 +59,7 @@ export async function findMatchingRides(params: SearchMatchParams): Promise<Matc
   const res = await pool.query(query, values);
 
   const results: MatchResult[] = res.rows
-    .map((row) => {
+    .map((row: any) => {
       const pickupDist = parseFloat(row.pickup_dist) || 0;
       const destDist = parseFloat(row.dest_dist) || 0;
       const pickupFraction = parseFloat(row.pickup_fraction) || 0;
@@ -117,7 +117,7 @@ export async function findMatchingRides(params: SearchMatchParams): Promise<Matc
         timeDifferenceMinutes: 0,
       };
     })
-    .filter((m) => m.matchScore >= 40); // Filter out unviable matches
+    .filter((m: MatchResult) => m.matchScore >= 40); // Filter out unviable matches
 
   // Sort descending by calculated matchScore
   results.sort((a, b) => b.matchScore - a.matchScore);
