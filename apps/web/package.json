@@ -12,6 +12,7 @@
   "dependencies": {
     "@campunex/shared": "*",
     "@types/leaflet": "^1.9.22",
+    "@vercel/analytics": "^2.0.1",
     "clsx": "^2.1.1",
     "framer-motion": "^13.1.1",
     "leaflet": "^1.9.4",

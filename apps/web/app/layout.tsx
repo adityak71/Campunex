@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { ToastProvider } from '../components/ui/Toast';
 import AuthGuard from '../components/AuthGuard';
+import { Analytics } from '@vercel/analytics/react';
 
 export const metadata: Metadata = {
   title: 'Campunex — Campus Ride-Matching Platform',
@@ -40,6 +41,7 @@ export default function RootLayout({
         <ToastProvider>
           <AuthGuard>{children}</AuthGuard>
         </ToastProvider>
+        <Analytics />
       </body>
     </html>
   );

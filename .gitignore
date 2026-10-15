@@ -73,3 +73,7 @@ Desktop.ini
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
+
+# AI Agent Skills & Tooling
+.agents/
+skills-lock.json
