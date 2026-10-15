@@ -1,8 +1,14 @@
+import dns from 'node:dns';
 import express from 'express';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
+
+// Prefer IPv4 in cloud container environments (like Render/Docker)
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 import cookieParser from 'cookie-parser';
 import { config } from './config/index.js';
 import { checkDbConnection } from './config/db.js';
