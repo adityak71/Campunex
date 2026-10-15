@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import WorkspaceLayout from '../../../components/layouts/WorkspaceLayout';
 import Navbar from '../../../components/Navbar';
@@ -28,7 +29,8 @@ import {
   Clock,
   ShieldCheck,
   Check,
-  Globe
+  Globe,
+  Lock
 } from 'lucide-react';
 
 // Bounding box validation for LPU / Regional Campus service area (Punjab & North India)
@@ -46,13 +48,49 @@ export default function DriverOfferPage() {
   // Multi-step state: 1 = Vehicle, 2 = Route, 3 = Schedule & Confirm
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
+  // Driver KYC & Verified Vehicle State
+  const [driverProfile, setDriverProfile] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [isPendingApproval, setIsPendingApproval] = useState(false);
+
   // STEP 1 — Vehicle State
   const [vehicleType, setVehicleType] = useState<'CAR' | 'BIKE'>('CAR');
-  const [vehicleMake, setVehicleMake] = useState('Honda');
-  const [vehicleModel, setVehicleModel] = useState('Civic');
-  const [vehicleColor, setVehicleColor] = useState('Silver');
-  const [vehicleRegistration, setVehicleRegistration] = useState('PB-08-AB-1234');
+  const [vehicleMake, setVehicleMake] = useState('Maruti Suzuki');
+  const [vehicleModel, setVehicleModel] = useState('');
+  const [vehicleColor, setVehicleColor] = useState('White');
+  const [vehicleRegistration, setVehicleRegistration] = useState('');
   const [totalSeats, setTotalSeats] = useState<number>(4);
+
+  useEffect(() => {
+    async function checkProfile() {
+      try {
+        setProfileLoading(true);
+        const res = await apiRequest('/driver/profile');
+        if (!res.profile) {
+          showToast('Please complete your Driver KYC details first.', 'info');
+          router.push('/driver/onboarding');
+          return;
+        }
+
+        setDriverProfile(res.profile);
+
+        if (res.profile.approval_status !== 'APPROVED') {
+          setIsPendingApproval(true);
+        } else {
+          // Auto-populate vehicle details from verified driver profile
+          setVehicleMake(res.profile.vehicle_make || 'Maruti Suzuki');
+          setVehicleModel(res.profile.vehicle_model || '');
+          setVehicleColor(res.profile.vehicle_color || 'White');
+          setVehicleRegistration(res.profile.vehicle_number || '');
+        }
+      } catch (err) {
+        router.push('/driver/onboarding');
+      } finally {
+        setProfileLoading(false);
+      }
+    }
+    checkProfile();
+  }, [router, showToast]);
 
   // STEP 2 — Route State
   const [originName, setOriginName] = useState('LPU Main Gate, Phagwara');
@@ -185,6 +223,54 @@ export default function DriverOfferPage() {
   const originPoint = { latitude: parseFloat(originLat), longitude: parseFloat(originLng) };
   const destPoint = { latitude: parseFloat(destLat), longitude: parseFloat(destLng) };
 
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0d1c] text-white flex flex-col font-sans">
+        <Navbar />
+        <main className="max-w-xl mx-auto px-4 py-28 flex-1 flex flex-col items-center justify-center space-y-4">
+          <div className="w-10 h-10 border-2 border-accent1 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs text-white/60">Verifying driver credentials...</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (isPendingApproval) {
+    return (
+      <div className="min-h-screen bg-[#0a0d1c] text-white flex flex-col font-sans">
+        <Navbar />
+        <main className="max-w-xl mx-auto px-4 py-20 flex-1 flex items-center justify-center">
+          <Card className="p-8 text-center space-y-6 bg-[#12162e] border-amber-500/30 rounded-[32px] shadow-2xl">
+            <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <Clock className="w-8 h-8 animate-pulse" />
+            </div>
+            <div className="space-y-2">
+              <Badge variant="warning">Verification Pending (24–48 Hours)</Badge>
+              <h2 className="text-2xl font-black text-white tracking-tight">Driver Approval in Progress</h2>
+              <p className="text-xs text-amber-200/90 leading-relaxed font-medium">
+                Please wait 24-48 hours. We are verifying your ID and vehicle details ({driverProfile?.vehicle_number}). Contact customer care if you need assistance.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Link href="/driver" className="flex-1">
+                <Button variant="ghost" className="w-full border-white/10 text-white/70">
+                  Return to Dashboard
+                </Button>
+              </Link>
+              <Link href="/contact?issue=verification" className="flex-1">
+                <Button variant="primary" className="w-full !bg-amber-600 hover:!bg-amber-700 !text-white font-bold">
+                  Contact Support
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <WorkspaceLayout mode="driver" title="Offer a Campus Ride" subtitle="Publish your route with verified 500m route proximity matching">
       <div className="space-y-8 w-full">
@@ -285,34 +371,59 @@ export default function DriverOfferPage() {
               </button>
             </div>
 
+            {/* Verified Campus Vehicle Notice */}
+            <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-indigo-200">
+              <span className="flex items-center gap-2 font-bold">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                Verified Campus Vehicle (Locked Details)
+              </span>
+              <span className="text-[10px] text-white/50">Auto-filled from approved driver KYC</span>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Vehicle Make"
-                required
-                value={vehicleMake}
-                onChange={(e) => setVehicleMake(e.target.value)}
-                placeholder="e.g. Honda, Hero, Maruti"
-              />
-              <Input
-                label="Vehicle Model"
-                required
-                value={vehicleModel}
-                onChange={(e) => setVehicleModel(e.target.value)}
-                placeholder="e.g. Civic, Activa, Swift"
-              />
-              <Input
-                label="Vehicle Color"
-                value={vehicleColor}
-                onChange={(e) => setVehicleColor(e.target.value)}
-                placeholder="e.g. Silver, Black, White"
-              />
-              <Input
-                label="Registration Number"
-                required
-                value={vehicleRegistration}
-                onChange={(e) => setVehicleRegistration(e.target.value.toUpperCase())}
-                placeholder="e.g. PB-08-AB-1234"
-              />
+              <div className="space-y-1.5 text-left">
+                <label className="text-xs font-bold text-white/60">Vehicle Make (Locked)</label>
+                <input
+                  type="text"
+                  readOnly
+                  disabled
+                  value={vehicleMake}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 font-medium cursor-not-allowed select-none"
+                />
+              </div>
+
+              <div className="space-y-1.5 text-left">
+                <label className="text-xs font-bold text-white/60">Vehicle Model (Locked)</label>
+                <input
+                  type="text"
+                  readOnly
+                  disabled
+                  value={vehicleModel}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 font-medium cursor-not-allowed select-none"
+                />
+              </div>
+
+              <div className="space-y-1.5 text-left">
+                <label className="text-xs font-bold text-white/60">Vehicle Color (Locked)</label>
+                <input
+                  type="text"
+                  readOnly
+                  disabled
+                  value={vehicleColor}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 font-medium cursor-not-allowed select-none"
+                />
+              </div>
+
+              <div className="space-y-1.5 text-left">
+                <label className="text-xs font-bold text-white/60">Registration Plate (Locked)</label>
+                <input
+                  type="text"
+                  readOnly
+                  disabled
+                  value={vehicleRegistration}
+                  className="w-full bg-white/5 border border-indigo-500/30 rounded-xl px-4 py-3 text-sm text-cyan-300 font-mono font-bold tracking-wider cursor-not-allowed select-none"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5 text-left">

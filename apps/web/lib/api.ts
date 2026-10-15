@@ -24,8 +24,26 @@ export async function apiRequest<T = any>(
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error || 'An API error occurred');
+    if (
+      (response.status === 403 && data.error === 'ACCOUNT_BLOCKED') ||
+      data.error === 'ACCOUNT_BLOCKED' ||
+      (typeof data.message === 'string' && data.message.includes('blocked by Campunex'))
+    ) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('campunex_account_blocked', {
+            detail: { message: data.message || 'You have been blocked by Campunex. Please contact customer care.' },
+          })
+        );
+      }
+    }
+
+    const err: any = new Error(data.message || data.error || 'An API error occurred');
+    err.status = response.status;
+    err.code = data.error;
+    throw err;
   }
 
   return data as T;
 }
+

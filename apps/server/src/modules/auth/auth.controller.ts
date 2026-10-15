@@ -43,6 +43,10 @@ export async function handleLogin(req: Request, res: Response): Promise<void> {
       token,
     });
   } catch (err: any) {
+    if (err.code === 'ACCOUNT_BLOCKED' || err.statusCode === 403) {
+      res.status(403).json({ error: 'ACCOUNT_BLOCKED', message: err.message });
+      return;
+    }
     res.status(401).json({ error: err.message || 'Authentication failed' });
   }
 }

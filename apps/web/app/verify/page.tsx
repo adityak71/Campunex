@@ -60,7 +60,7 @@ export default function VerifyPage() {
 
       showToast('University email verified successfully!', 'success');
       if (res?.user?.role === 'DRIVER') {
-        router.push('/driver');
+        router.push('/driver/onboarding');
       } else {
         router.push('/dashboard');
       }

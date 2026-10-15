@@ -45,6 +45,7 @@ export default function DriverDashboardPage() {
   const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
   const [recentHistory, setRecentHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [driverProfile, setDriverProfile] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Driver Availability State
@@ -71,6 +72,20 @@ export default function DriverDashboardPage() {
           return;
         }
         setUser(meRes.user);
+
+        // Fetch driver KYC and vehicle profile
+        try {
+          const profileRes = await apiRequest('/driver/profile');
+          if (!profileRes.profile) {
+            router.push('/driver/onboarding');
+            return;
+          }
+          setDriverProfile(profileRes.profile);
+        } catch (e) {
+          // If no profile, redirect to onboarding
+          router.push('/driver/onboarding');
+          return;
+        }
 
         // Fetch driver rides
         const ridesRes = await apiRequest('/rides/my-rides');
@@ -155,11 +170,24 @@ export default function DriverDashboardPage() {
       mode="driver"
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          <Link href="/driver/offer">
-            <Button variant="primary" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
-              Offer Ride
+          {driverProfile?.approval_status === 'APPROVED' ? (
+            <Link href="/driver/offer">
+              <Button variant="primary" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
+                Offer Ride
+              </Button>
+            </Link>
+          ) : (
+            <Button
+              variant="primary"
+              size="sm"
+              disabled
+              leftIcon={<Clock className="w-4 h-4" />}
+              className="opacity-60 cursor-not-allowed"
+              title="Driver KYC approval pending (24-48 hours)"
+            >
+              Offer Ride (Pending)
             </Button>
-          </Link>
+          )}
           <Link href="/driver/requests">
             <Button variant="ghost" size="sm" className="bg-white/5 border border-white/10" leftIcon={<UserCheck className="w-4 h-4 text-accent1" />}>
               Requests ({pendingRequests.length})
@@ -174,6 +202,40 @@ export default function DriverDashboardPage() {
       }
     >
       <div className="space-y-6">
+
+        {/* Pending Verification Notice */}
+        {driverProfile && driverProfile.approval_status !== 'APPROVED' && (
+          <Card className="p-6 bg-gradient-to-r from-amber-500/15 to-orange-500/10 border border-amber-500/30 rounded-[28px] text-amber-200 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="p-3 bg-amber-500/20 text-amber-400 rounded-2xl shrink-0 mt-0.5">
+                  <Clock className="w-6 h-6 animate-pulse" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                    Driver Verification Pending (24–48 Hours)
+                    <Badge variant="warning">UNDER REVIEW</Badge>
+                  </h3>
+                  <p className="text-xs text-amber-200/90 leading-relaxed max-w-2xl font-medium">
+                    Please wait 24-48 hours. We are verifying your ID and vehicle details ({driverProfile.vehicle_number} — {driverProfile.vehicle_make} {driverProfile.vehicle_model}). Contact support if you need assistance.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                <Link href="/contact?issue=verification" className="w-full sm:w-auto">
+                  <Button variant="outline" size="sm" className="w-full border-amber-500/40 text-amber-200 hover:bg-amber-500/20">
+                    Contact Support
+                  </Button>
+                </Link>
+                <Link href="/driver/onboarding" className="w-full sm:w-auto">
+                  <Button variant="ghost" size="sm" className="w-full border-white/10 text-white/80 hover:bg-white/5">
+                    Edit KYC
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Error Alert */}
         {error && (

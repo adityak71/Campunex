@@ -17,7 +17,28 @@ export interface User {
   email: string;
   role: UserRole;
   verification_status: VerificationStatus;
+  is_blocked?: boolean;
   institution_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type DriverApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface DriverProfile {
+  id: string;
+  user_id: string;
+  phone_number: string;
+  dob: string;
+  aadhaar_number: string;
+  driving_license_number: string;
+  rc_number: string;
+  vehicle_number: string;
+  vehicle_make: string;
+  vehicle_model: string;
+  vehicle_color: string;
+  approval_status: DriverApprovalStatus;
+  rejection_reason?: string;
   created_at: string;
   updated_at: string;
 }

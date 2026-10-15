@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { ToastProvider } from '../components/ui/Toast';
 import AuthGuard from '../components/AuthGuard';
+import BlockedUserModal from '../components/BlockedUserModal';
 import { Analytics } from '@vercel/analytics/react';
 
 export const metadata: Metadata = {
@@ -40,6 +41,7 @@ export default function RootLayout({
       <body className="antialiased font-sans transition-colors duration-200">
         <ToastProvider>
           <AuthGuard>{children}</AuthGuard>
+          <BlockedUserModal />
         </ToastProvider>
         <Analytics />
       </body>

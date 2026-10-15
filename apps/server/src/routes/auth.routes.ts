@@ -10,6 +10,8 @@ import {
 } from '../modules/auth/auth.controller.js';
 import { authenticate } from '../middleware/auth.js';
 
+import { pool } from '../config/db.js';
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // 20 attempts per 15 minutes
@@ -17,6 +19,18 @@ const authLimiter = rateLimit({
 });
 
 const router = Router();
+
+// Public endpoint for registration form to fetch approved university domains
+router.get('/institutions', async (_req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, name, email_domain FROM institutions WHERE verification_enabled = true ORDER BY name ASC;'
+    );
+    res.json({ institutions: result.rows });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to fetch universities' });
+  }
+});
 
 router.post('/register', authLimiter, handleRegister);
 router.post('/login', authLimiter, handleLogin);
@@ -26,3 +40,4 @@ router.post('/verify-institution', authenticate, handleVerifyInstitution);
 router.post('/resend-otp', authenticate, authLimiter, handleResendOtp);
 
 export default router;
+

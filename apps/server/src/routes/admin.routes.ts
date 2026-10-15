@@ -80,19 +80,63 @@ router.delete('/institutions/:id', async (req: any, res: Response) => {
   }
 });
 
-// GET /api/v1/admin/users - Platform user administration with institution details
+// GET /api/v1/admin/users - Platform user administration with institution details and driver KYC info
 router.get('/users', async (_req: Request, res: Response) => {
   try {
     const result = await pool.query(
-      `SELECT u.id, u.name, u.email, u.role, u.verification_status, u.created_at, i.name AS institution
+      `SELECT u.id, u.name, u.email, u.role, u.verification_status, u.is_blocked, u.created_at,
+              i.name AS institution,
+              dp.id AS driver_profile_id,
+              dp.phone_number,
+              dp.dob,
+              dp.aadhaar_number,
+              dp.driving_license_number,
+              dp.rc_number,
+              dp.vehicle_number,
+              dp.vehicle_make,
+              dp.vehicle_model,
+              dp.vehicle_color,
+              dp.approval_status,
+              dp.rejection_reason
        FROM users u
        LEFT JOIN institutions i ON u.institution_id = i.id
+       LEFT JOIN driver_profiles dp ON dp.user_id = u.id
        ORDER BY u.created_at DESC
        LIMIT 100;`
     );
     res.json({ users: result.rows });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to fetch platform users' });
+  }
+});
+
+// PATCH /api/v1/admin/users/:id/block - Block or unblock any user
+router.patch('/users/:id/block', async (req: any, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { is_blocked } = req.body;
+    if (typeof is_blocked !== 'boolean') {
+      return res.status(400).json({ error: 'is_blocked must be a boolean (true or false)' });
+    }
+
+    const result = await pool.query(
+      `UPDATE users
+       SET is_blocked = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, name, email, role, is_blocked, verification_status;`,
+      [is_blocked, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      message: is_blocked ? 'User blocked successfully' : 'User unblocked successfully',
+      user: result.rows[0],
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to update user block status' });
   }
 });
 
@@ -113,15 +157,82 @@ router.patch('/users/:id/verification', async (req: any, res: Response) => {
       [verification_status, id]
     );
 
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'User not found' });
+    const user = result.rows[0];
+
+    // If driver, keep driver_profiles approval_status in sync
+    if (user.role === 'DRIVER') {
+      const driverApproval =
+        verification_status === 'VERIFIED' ? 'APPROVED' :
+        verification_status === 'REJECTED' ? 'REJECTED' : 'PENDING';
+      await pool.query(
+        `UPDATE driver_profiles SET approval_status = $1, updated_at = NOW() WHERE user_id = $2;`,
+        [driverApproval, id]
+      );
     }
 
-    res.json({ message: 'User verification updated', user: result.rows[0] });
+    res.json({ message: 'User verification updated', user });
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to update user verification' });
   }
 });
+
+// GET /api/v1/admin/drivers/pending - Fetch driver KYC & vehicle profiles for verification queue
+router.get('/drivers/pending', async (_req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      `SELECT dp.*, u.name AS driver_name, u.email AS driver_email, u.created_at AS user_created_at, i.name AS institution_name
+       FROM driver_profiles dp
+       JOIN users u ON dp.user_id = u.id
+       LEFT JOIN institutions i ON u.institution_id = i.id
+       ORDER BY dp.created_at DESC;`
+    );
+    res.json({ driverProfiles: result.rows });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to fetch driver profiles' });
+  }
+});
+
+// PATCH /api/v1/admin/drivers/:id/approval - Approve or reject driver application
+router.patch('/drivers/:id/approval', async (req: any, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { approval_status, rejection_reason } = req.body;
+    if (!['APPROVED', 'REJECTED', 'PENDING'].includes(approval_status)) {
+      return res.status(400).json({ error: 'approval_status must be APPROVED, REJECTED, or PENDING' });
+    }
+
+    const result = await pool.query(
+      `UPDATE driver_profiles
+       SET approval_status = $1,
+           rejection_reason = $2,
+           updated_at = NOW()
+       WHERE id::text = $3 OR user_id::text = $3
+       RETURNING *;`,
+      [approval_status, rejection_reason || null, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Driver profile not found' });
+    }
+
+    const profile = result.rows[0];
+
+    // Synchronize user's verification_status
+    const newVerificationStatus =
+      approval_status === 'APPROVED' ? 'VERIFIED' :
+      approval_status === 'REJECTED' ? 'REJECTED' : 'PENDING';
+
+    await pool.query(
+      `UPDATE users SET verification_status = $1, updated_at = NOW() WHERE id = $2;`,
+      [newVerificationStatus, profile.user_id]
+    );
+
+    res.json({ message: `Driver profile ${approval_status.toLowerCase()} successfully`, profile });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to update driver approval' });
+  }
+});
+
 
 // GET /api/v1/admin/system - Live platform metrics from database
 router.get('/system', async (_req: Request, res: Response) => {

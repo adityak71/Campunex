@@ -53,6 +53,19 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         const { user } = await apiRequest('/auth/me');
         if (!user) throw new Error('No user data');
 
+        if (user.is_blocked) {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('campunex_account_blocked', {
+                detail: { message: 'You have been blocked by Campunex. Please contact customer care.' },
+              })
+            );
+          }
+          setAuthorized(false);
+          setLoading(false);
+          return;
+        }
+
         const role = (user.role || 'RIDER').toUpperCase();
         setUserRole(role);
 

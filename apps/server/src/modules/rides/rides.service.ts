@@ -27,6 +27,15 @@ export async function createRide(data: {
     total_seats,
   } = data;
 
+  // 1. Verify driver KYC and vehicle profile is approved by Admin
+  const driverProfileRes = await pool.query(
+    'SELECT approval_status FROM driver_profiles WHERE user_id = $1;',
+    [driverId]
+  );
+  if (driverProfileRes.rows.length === 0 || driverProfileRes.rows[0].approval_status !== 'APPROVED') {
+    throw new Error('Your driver profile is pending verification. You can offer rides once approved by Admin (usually 24-48 hours).');
+  }
+
   const originWkt = pointToWkt(origin);
   const destWkt = pointToWkt(destination);
 

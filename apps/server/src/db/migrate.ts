@@ -32,6 +32,7 @@ export async function runMigrations(): Promise<void> {
         password_hash TEXT NOT NULL,
         role VARCHAR(20) DEFAULT 'RIDER' CHECK (role IN ('RIDER', 'DRIVER', 'ADMIN')),
         verification_status VARCHAR(20) DEFAULT 'PENDING' CHECK (verification_status IN ('PENDING', 'VERIFIED', 'REJECTED')),
+        is_blocked BOOLEAN DEFAULT false,
         institution_id UUID REFERENCES institutions(id) ON DELETE SET NULL,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -154,6 +155,41 @@ export async function runMigrations(): Promise<void> {
       ALTER TABLE rides DROP CONSTRAINT IF EXISTS rides_status_check;
       ALTER TABLE rides ADD CONSTRAINT rides_status_check
         CHECK (status IN ('SCHEDULED', 'OPEN', 'ACTIVE', 'CANCELLED', 'COMPLETED', 'EXPIRED'));
+    `);
+
+    // Ensure is_blocked column exists on users table
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN DEFAULT false;
+    `);
+
+    // Driver KYC and Vehicle profiles table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS driver_profiles (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        phone_number VARCHAR(20) NOT NULL,
+        dob DATE NOT NULL,
+        aadhaar_number VARCHAR(20) NOT NULL,
+        driving_license_number VARCHAR(50),
+        rc_number VARCHAR(50),
+        vehicle_number VARCHAR(50) NOT NULL,
+        vehicle_make VARCHAR(50) NOT NULL,
+        vehicle_model VARCHAR(50) NOT NULL,
+        vehicle_color VARCHAR(50) NOT NULL,
+        approval_status VARCHAR(30) DEFAULT 'PENDING' CHECK (approval_status IN ('PENDING', 'APPROVED', 'REJECTED')),
+        rejection_reason TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      ALTER TABLE driver_profiles ADD COLUMN IF NOT EXISTS driving_license_number VARCHAR(50);
+      ALTER TABLE driver_profiles ADD COLUMN IF NOT EXISTS rc_number VARCHAR(50);
+      CREATE INDEX IF NOT EXISTS idx_driver_profiles_user ON driver_profiles(user_id);
+      CREATE INDEX IF NOT EXISTS idx_driver_profiles_status ON driver_profiles(approval_status);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_profiles_aadhaar ON driver_profiles(aadhaar_number);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_profiles_dl ON driver_profiles(driving_license_number) WHERE driving_license_number IS NOT NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_profiles_rc ON driver_profiles(rc_number) WHERE rc_number IS NOT NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_profiles_vehicle_number ON driver_profiles(vehicle_number);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_profiles_phone ON driver_profiles(phone_number);
     `);
 
     await client.query('COMMIT');

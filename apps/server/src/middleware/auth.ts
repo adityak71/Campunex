@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt.js';
+import { pool } from '../config/db.js';
 
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
+export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   let token: string | undefined = req.cookies?.token;
 
   if (!token && req.headers.authorization) {
@@ -22,6 +23,21 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
     return;
   }
 
+  // Real-time blocked account enforcement
+  try {
+    const userRes = await pool.query('SELECT is_blocked FROM users WHERE id = $1;', [payload.userId]);
+    if (userRes.rows.length > 0 && userRes.rows[0].is_blocked) {
+      res.status(403).json({
+        error: 'ACCOUNT_BLOCKED',
+        message: 'You have been blocked by Campunex. Please contact customer care.',
+      });
+      return;
+    }
+  } catch (err) {
+    console.error('Error checking user block status in auth middleware:', err);
+  }
+
   req.user = payload;
   next();
 }
+

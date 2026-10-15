@@ -11,8 +11,10 @@ export async function registerUser(data: {
   email: string;
   password: string;
   role: UserRole;
+  university?: string;
+  institutionId?: string;
 }): Promise<{ user: User; token: string }> {
-  const { name, email, password, role } = data;
+  const { name, email, password, role, university, institutionId: providedInstId } = data;
 
   // 1. Check existing email
   const existingRes = await pool.query('SELECT id FROM users WHERE email = $1;', [email]);
@@ -22,10 +24,30 @@ export async function registerUser(data: {
 
   // 2. Extract email domain for institutional identity matching
   const emailDomain = email.split('@')[1]?.toLowerCase();
-  let institutionId: string | undefined;
+  let institutionId: string | undefined = providedInstId;
   let verificationStatus: VerificationStatus = 'PENDING';
 
-  if (emailDomain) {
+  if (institutionId) {
+    const instCheck = await pool.query('SELECT id, name, email_domain FROM institutions WHERE id = $1;', [institutionId]);
+    if (instCheck.rows.length > 0) {
+      const inst = instCheck.rows[0];
+      if (emailDomain !== inst.email_domain.toLowerCase()) {
+        throw new Error(`Your email domain (@${emailDomain}) does not match the selected university (${inst.name} - @${inst.email_domain}).`);
+      }
+    }
+  } else if (university) {
+    const instCheck = await pool.query(
+      'SELECT id, name, email_domain FROM institutions WHERE LOWER(name) = LOWER($1) OR email_domain = $2;',
+      [university, emailDomain || '']
+    );
+    if (instCheck.rows.length > 0) {
+      const inst = instCheck.rows[0];
+      institutionId = inst.id;
+      if (emailDomain && emailDomain !== inst.email_domain.toLowerCase()) {
+        throw new Error(`Your email domain (@${emailDomain}) does not match the selected university (${inst.name} - @${inst.email_domain}).`);
+      }
+    }
+  } else if (emailDomain) {
     const instRes = await pool.query('SELECT id FROM institutions WHERE email_domain = $1;', [
       emailDomain,
     ]);
@@ -39,9 +61,9 @@ export async function registerUser(data: {
 
   // 4. Create user in PostgreSQL
   const insertRes = await pool.query<User>(
-    `INSERT INTO users (name, email, password_hash, role, verification_status, institution_id)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING id, name, email, role, verification_status, institution_id, created_at, updated_at;`,
+    `INSERT INTO users (name, email, password_hash, role, verification_status, institution_id, is_blocked)
+     VALUES ($1, $2, $3, $4, $5, $6, false)
+     RETURNING id, name, email, role, verification_status, is_blocked, institution_id, created_at, updated_at;`,
     [name, email, passwordHash, role, verificationStatus, institutionId || null]
   );
 
@@ -74,7 +96,7 @@ export async function loginUser(data: {
   const { email, password } = data;
 
   const userRes = await pool.query<User & { password_hash: string }>(
-    `SELECT id, name, email, password_hash, role, verification_status, institution_id, created_at, updated_at
+    `SELECT id, name, email, password_hash, role, verification_status, is_blocked, institution_id, created_at, updated_at
      FROM users WHERE email = $1;`,
     [email]
   );
@@ -87,6 +109,14 @@ export async function loginUser(data: {
   const isValid = await verifyPassword(password, user.password_hash);
   if (!isValid) {
     throw new Error('Invalid email or password');
+  }
+
+  // Check if account is blocked by Admin
+  if (user.is_blocked) {
+    const err: any = new Error('You have been blocked by Campunex. Please contact customer care.');
+    err.code = 'ACCOUNT_BLOCKED';
+    err.statusCode = 403;
+    throw err;
   }
 
   const jwtPayload: JwtPayload = {
@@ -168,7 +198,7 @@ export async function verifyInstitutionOtp(
 
 export async function getUserById(userId: string): Promise<User | null> {
   const res = await pool.query<User>(
-    `SELECT id, name, email, role, verification_status, institution_id, created_at, updated_at
+    `SELECT id, name, email, role, verification_status, is_blocked, institution_id, created_at, updated_at
      FROM users WHERE id = $1;`,
     [userId]
   );

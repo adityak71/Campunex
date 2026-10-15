@@ -64,7 +64,7 @@ export default function Button({
       ) : (
         <>
           {leftIcon}
-          <span>{children}</span>
+          <span className="inline-flex items-center justify-center gap-2">{children}</span>
           {rightIcon}
         </>
       )}

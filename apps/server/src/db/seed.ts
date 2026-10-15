@@ -85,6 +85,18 @@ export async function runSeeds(): Promise<void> {
     } else {
       console.log('ℹ️ Seed data already present.');
     }
+
+    // Ensure Demo Driver profile exists and is approved for development / testing
+    const existingDriverRes = await client.query(`SELECT id FROM users WHERE email = 'driver@lpu.in' LIMIT 1;`);
+    if (existingDriverRes.rows.length > 0) {
+      await client.query(
+        `INSERT INTO driver_profiles (
+          user_id, phone_number, dob, aadhaar_number, driving_license_number, rc_number, vehicle_number, vehicle_make, vehicle_model, vehicle_color, approval_status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'APPROVED')
+        ON CONFLICT (user_id) DO NOTHING;`,
+        [existingDriverRes.rows[0].id, '9876543210', '1998-05-15', '123456789012', 'DL-PB-08-2020-0012345', 'RC-PB-08-AB-1234', 'PB-08-AB-1234', 'Honda', 'Civic', 'Silver']
+      );
+    }
   } catch (err) {
     console.error('❌ Database seed failed:', err);
   } finally {
