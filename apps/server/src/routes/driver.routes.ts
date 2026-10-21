@@ -52,6 +52,7 @@ router.post('/profile', async (req: Request, res: Response) => {
       aadhaar_number,
       driving_license_number,
       rc_number,
+      vehicle_type,
       vehicle_number,
       vehicle_make,
       vehicle_model,
@@ -100,15 +101,16 @@ router.post('/profile', async (req: Request, res: Response) => {
 
     const result = await pool.query(
       `INSERT INTO driver_profiles (
-         user_id, phone_number, dob, aadhaar_number, driving_license_number, rc_number, vehicle_number, vehicle_make, vehicle_model, vehicle_color, approval_status
+         user_id, phone_number, dob, aadhaar_number, driving_license_number, rc_number, vehicle_type, vehicle_number, vehicle_make, vehicle_model, vehicle_color, approval_status
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'PENDING')
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'PENDING')
        ON CONFLICT (user_id) DO UPDATE SET
          phone_number = EXCLUDED.phone_number,
          dob = EXCLUDED.dob,
          aadhaar_number = EXCLUDED.aadhaar_number,
          driving_license_number = EXCLUDED.driving_license_number,
          rc_number = EXCLUDED.rc_number,
+         vehicle_type = EXCLUDED.vehicle_type,
          vehicle_number = EXCLUDED.vehicle_number,
          vehicle_make = EXCLUDED.vehicle_make,
          vehicle_model = EXCLUDED.vehicle_model,
@@ -124,6 +126,7 @@ router.post('/profile', async (req: Request, res: Response) => {
         cleanAadhaar,
         cleanDL,
         cleanRC,
+        vehicle_type || 'CAR',
         cleanVehicle,
         vehicle_make.trim(),
         vehicle_model.trim(),

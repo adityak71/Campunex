@@ -172,6 +172,7 @@ export async function runMigrations(): Promise<void> {
         aadhaar_number VARCHAR(20) NOT NULL,
         driving_license_number VARCHAR(50),
         rc_number VARCHAR(50),
+        vehicle_type VARCHAR(20) DEFAULT 'CAR' CHECK (vehicle_type IN ('CAR', 'BIKE')),
         vehicle_number VARCHAR(50) NOT NULL,
         vehicle_make VARCHAR(50) NOT NULL,
         vehicle_model VARCHAR(50) NOT NULL,
@@ -183,6 +184,7 @@ export async function runMigrations(): Promise<void> {
       );
       ALTER TABLE driver_profiles ADD COLUMN IF NOT EXISTS driving_license_number VARCHAR(50);
       ALTER TABLE driver_profiles ADD COLUMN IF NOT EXISTS rc_number VARCHAR(50);
+      ALTER TABLE driver_profiles ADD COLUMN IF NOT EXISTS vehicle_type VARCHAR(20) DEFAULT 'CAR';
       CREATE INDEX IF NOT EXISTS idx_driver_profiles_user ON driver_profiles(user_id);
       CREATE INDEX IF NOT EXISTS idx_driver_profiles_status ON driver_profiles(approval_status);
       CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_profiles_aadhaar ON driver_profiles(aadhaar_number);

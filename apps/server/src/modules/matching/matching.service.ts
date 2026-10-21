@@ -8,6 +8,7 @@ export interface SearchMatchParams {
   dropoff_lat: number;
   dropoff_lng: number;
   departure_time?: string;
+  vehicle_type?: string;
   max_distance_meters?: number;
 }
 
@@ -18,6 +19,7 @@ export async function findMatchingRides(params: SearchMatchParams): Promise<Matc
     dropoff_lat,
     dropoff_lng,
     departure_time,
+    vehicle_type = 'ANY',
     max_distance_meters = config.spatial.matchingProximityMeters,
   } = params;
 
@@ -36,6 +38,7 @@ export async function findMatchingRides(params: SearchMatchParams): Promise<Matc
       r.total_seats,
       r.available_seats,
       r.status,
+      COALESCE(dp.vehicle_type, 'CAR') AS vehicle_type,
       r.created_at,
       r.updated_at,
       u.name AS driver_name,
@@ -49,13 +52,15 @@ export async function findMatchingRides(params: SearchMatchParams): Promise<Matc
       ST_Length(r.route_geometry::geography) AS driver_route_length
     FROM rides r
     JOIN users u ON r.driver_id = u.id
+    LEFT JOIN driver_profiles dp ON r.driver_id = dp.user_id
     WHERE (r.status = 'SCHEDULED' OR r.status = 'OPEN')
       AND r.available_seats > 0
       AND r.departure_time + INTERVAL '30 minutes' >= NOW()
-      AND ST_DWithin(r.route_geometry::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $5);
+      AND ST_DWithin(r.route_geometry::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $5)
+      AND ($6 = 'ANY' OR COALESCE(dp.vehicle_type, 'CAR') = $6);
   `;
 
-  const values = [pickup_lng, pickup_lat, dropoff_lng, dropoff_lat, max_distance_meters];
+  const values = [pickup_lng, pickup_lat, dropoff_lng, dropoff_lat, max_distance_meters, (vehicle_type || 'ANY').toUpperCase()];
   const res = await pool.query(query, values);
 
   const results: MatchResult[] = res.rows
@@ -103,6 +108,7 @@ export async function findMatchingRides(params: SearchMatchParams): Promise<Matc
         total_seats: row.total_seats,
         available_seats: row.available_seats,
         status: row.status,
+        vehicle_type: (row.vehicle_type || 'CAR') as 'CAR' | 'BIKE',
         created_at: new Date(row.created_at).toISOString(),
         updated_at: new Date(row.updated_at).toISOString(),
       };

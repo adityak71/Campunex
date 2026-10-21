@@ -73,6 +73,7 @@ export const driverProfileSchema = z.object({
   aadhaar_number: z.string().min(12, '12-digit Aadhaar number required').max(16),
   driving_license_number: z.string().min(5, 'Valid Driving License number required').max(30),
   rc_number: z.string().min(5, 'Valid Vehicle RC number required').max(30),
+  vehicle_type: z.enum(['CAR', 'BIKE']).default('CAR'),
   vehicle_number: z.string().min(4, 'Vehicle registration number required').max(30),
   vehicle_make: z.string().min(2, 'Vehicle make is required'),
   vehicle_model: z.string().min(1, 'Vehicle model is required'),

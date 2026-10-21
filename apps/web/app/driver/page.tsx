@@ -405,7 +405,11 @@ export default function DriverDashboardPage() {
                     <div className="flex justify-between items-start">
                       <div className="space-y-1">
                         <div className="font-extrabold text-base text-white/90 flex items-center gap-1.5">
-                          <MapPin className="w-4 h-4 text-accent3" />
+                          {ride.vehicle_type === 'BIKE' ? (
+                            <Bike className="w-4 h-4 text-purple-400 shrink-0" />
+                          ) : (
+                            <Car className="w-4 h-4 text-indigo-400 shrink-0" />
+                          )}
                           {ride.origin_name} ➔ {ride.destination_name}
                         </div>
                         <div className="text-xs text-white/50 flex items-center gap-2">

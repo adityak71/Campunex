@@ -24,6 +24,7 @@ export interface User {
 }
 
 export type DriverApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type VehicleType = 'CAR' | 'BIKE';
 
 export interface DriverProfile {
   id: string;
@@ -33,6 +34,7 @@ export interface DriverProfile {
   aadhaar_number: string;
   driving_license_number: string;
   rc_number: string;
+  vehicle_type: VehicleType;
   vehicle_number: string;
   vehicle_make: string;
   vehicle_model: string;
@@ -55,6 +57,7 @@ export interface Ride {
   total_seats: number;
   available_seats: number;
   status: RideStatus;
+  vehicle_type?: VehicleType;
   created_at: string;
   updated_at: string;
 }

@@ -11,6 +11,7 @@ import { useToast } from '../../../components/ui/Toast';
 import { apiRequest } from '../../../lib/api';
 import {
   Car,
+  Bike,
   ShieldCheck,
   CreditCard,
   Calendar,
@@ -22,12 +23,24 @@ import {
 } from 'lucide-react';
 
 export default function DriverOnboardingPage() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    phone_number: string;
+    dob: string;
+    aadhaar_number: string;
+    driving_license_number: string;
+    rc_number: string;
+    vehicle_type: 'CAR' | 'BIKE';
+    vehicle_number: string;
+    vehicle_make: string;
+    vehicle_model: string;
+    vehicle_color: string;
+  }>({
     phone_number: '',
     dob: '',
     aadhaar_number: '',
     driving_license_number: '',
     rc_number: '',
+    vehicle_type: 'CAR',
     vehicle_number: '',
     vehicle_make: 'Maruti Suzuki',
     vehicle_model: '',
@@ -45,14 +58,16 @@ export default function DriverOnboardingPage() {
         const res = await apiRequest('/driver/profile');
         if (res.profile) {
           setExistingStatus(res.profile.approval_status);
+          const vType = (res.profile.vehicle_type as 'CAR' | 'BIKE') || 'CAR';
           setFormData({
             phone_number: res.profile.phone_number || '',
             dob: res.profile.dob ? new Date(res.profile.dob).toISOString().slice(0, 10) : '',
             aadhaar_number: res.profile.aadhaar_number || '',
             driving_license_number: res.profile.driving_license_number || '',
             rc_number: res.profile.rc_number || '',
+            vehicle_type: vType,
             vehicle_number: res.profile.vehicle_number || '',
-            vehicle_make: res.profile.vehicle_make || 'Maruti Suzuki',
+            vehicle_make: res.profile.vehicle_make || (vType === 'BIKE' ? 'Hero' : 'Maruti Suzuki'),
             vehicle_model: res.profile.vehicle_model || '',
             vehicle_color: res.profile.vehicle_color || 'White',
           });
@@ -112,6 +127,7 @@ export default function DriverOnboardingPage() {
           aadhaar_number: cleanAadhaar,
           driving_license_number: formData.driving_license_number.trim().toUpperCase(),
           rc_number: formData.rc_number.trim().toUpperCase(),
+          vehicle_type: formData.vehicle_type,
           vehicle_number: formData.vehicle_number.trim().toUpperCase(),
           vehicle_make: formData.vehicle_make.trim(),
           vehicle_model: formData.vehicle_model.trim(),
@@ -243,24 +259,96 @@ export default function DriverOnboardingPage() {
               </div>
 
               {/* Section 2: Vehicle Details */}
-              <div className="space-y-4 pt-2">
+              <div className="space-y-5 pt-2">
                 <div className="text-xs font-bold text-accent1 uppercase tracking-wider border-b border-white/10 pb-1 flex justify-between items-center">
                   <span>2. Vehicle Specifications</span>
                   <span className="text-[10px] text-white/50 lowercase">reused & locked during ride creation</span>
+                </div>
+
+                {/* Primary Vehicle Type Selector (Car vs Bike) */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-white/90">Select Vehicle Category</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          vehicle_type: 'CAR',
+                          vehicle_make: ['Hero', 'Bajaj', 'TVS', 'Royal Enfield', 'Yamaha', 'Suzuki', 'KTM', 'Ather / EV'].includes(prev.vehicle_make)
+                            ? 'Maruti Suzuki'
+                            : prev.vehicle_make,
+                        }));
+                      }}
+                      className={`p-4 rounded-2xl border flex items-center gap-3.5 text-left transition-all duration-200 cursor-pointer ${
+                        formData.vehicle_type === 'CAR'
+                          ? 'border-indigo-500 bg-indigo-500/20 text-white ring-2 ring-indigo-500/40 shadow-lg'
+                          : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className={`p-3 rounded-xl shrink-0 ${formData.vehicle_type === 'CAR' ? 'bg-indigo-500 text-white shadow-md' : 'bg-white/10 text-white/50'}`}>
+                        <Car className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-white flex items-center gap-1.5">
+                          Car / 4-Wheeler
+                          {formData.vehicle_type === 'CAR' && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-400/30">Selected</span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-white/50 mt-0.5">Sedan, Hatchback, SUV (1–6 seats)</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          vehicle_type: 'BIKE',
+                          vehicle_make: ['Maruti Suzuki', 'Hyundai', 'Tata', 'Mahindra', 'Toyota', 'Kia', 'Volkswagen'].includes(prev.vehicle_make)
+                            ? 'Hero'
+                            : prev.vehicle_make,
+                        }));
+                      }}
+                      className={`p-4 rounded-2xl border flex items-center gap-3.5 text-left transition-all duration-200 cursor-pointer ${
+                        formData.vehicle_type === 'BIKE'
+                          ? 'border-purple-500 bg-purple-500/20 text-white ring-2 ring-purple-500/40 shadow-lg'
+                          : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className={`p-3 rounded-xl shrink-0 ${formData.vehicle_type === 'BIKE' ? 'bg-purple-500 text-white shadow-md' : 'bg-white/10 text-white/50'}`}>
+                        <Bike className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-white flex items-center gap-1.5">
+                          Bike / 2-Wheeler
+                          {formData.vehicle_type === 'BIKE' && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-300 font-bold border border-purple-400/30">Selected</span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-white/50 mt-0.5">Motorcycle, Scooter (1 seat max)</div>
+                      </div>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="block text-xs font-bold text-white/90">License Plate / Vehicle Number</label>
                     <div className="relative">
-                      <Car className="w-4 h-4 absolute left-3.5 top-3.5 text-white/40" />
+                      {formData.vehicle_type === 'BIKE' ? (
+                        <Bike className="w-4 h-4 absolute left-3.5 top-3.5 text-white/40" />
+                      ) : (
+                        <Car className="w-4 h-4 absolute left-3.5 top-3.5 text-white/40" />
+                      )}
                       <input
                         type="text"
                         required
                         value={formData.vehicle_number}
                         onChange={(e) => setFormData({ ...formData, vehicle_number: e.target.value.toUpperCase() })}
                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white font-mono uppercase focus:outline-none focus:border-accent1/50 focus:ring-1 focus:ring-accent1/50 transition-all placeholder:text-white/20 text-sm tracking-wider"
-                        placeholder="PB-08-AB-1234"
+                        placeholder={formData.vehicle_type === 'BIKE' ? 'PB-08-BK-4321' : 'PB-08-AB-1234'}
                       />
                     </div>
                   </div>
@@ -289,15 +377,32 @@ export default function DriverOnboardingPage() {
                       onChange={(e) => setFormData({ ...formData, vehicle_make: e.target.value })}
                       className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 px-3 text-white text-xs focus:outline-none focus:border-accent1/50"
                     >
-                      <option value="Maruti Suzuki">Maruti Suzuki</option>
-                      <option value="Honda">Honda</option>
-                      <option value="Hyundai">Hyundai</option>
-                      <option value="Tata">Tata</option>
-                      <option value="Hero">Hero</option>
-                      <option value="Bajaj">Bajaj</option>
-                      <option value="Royal Enfield">Royal Enfield</option>
-                      <option value="Yamaha">Yamaha</option>
-                      <option value="Other">Other</option>
+                      {formData.vehicle_type === 'CAR' ? (
+                        <>
+                          <option value="Maruti Suzuki">Maruti Suzuki</option>
+                          <option value="Hyundai">Hyundai</option>
+                          <option value="Tata">Tata</option>
+                          <option value="Mahindra">Mahindra</option>
+                          <option value="Honda">Honda</option>
+                          <option value="Toyota">Toyota</option>
+                          <option value="Kia">Kia</option>
+                          <option value="Volkswagen">Volkswagen</option>
+                          <option value="Other">Other</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="Hero">Hero</option>
+                          <option value="Honda">Honda</option>
+                          <option value="Bajaj">Bajaj</option>
+                          <option value="TVS">TVS</option>
+                          <option value="Royal Enfield">Royal Enfield</option>
+                          <option value="Yamaha">Yamaha</option>
+                          <option value="Suzuki">Suzuki</option>
+                          <option value="KTM">KTM</option>
+                          <option value="Ather / EV">Ather / EV</option>
+                          <option value="Other">Other</option>
+                        </>
+                      )}
                     </select>
                   </div>
 
@@ -309,7 +414,7 @@ export default function DriverOnboardingPage() {
                       value={formData.vehicle_model}
                       onChange={(e) => setFormData({ ...formData, vehicle_model: e.target.value })}
                       className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-3 text-white text-xs focus:outline-none focus:border-accent1/50 placeholder:text-white/20"
-                      placeholder="Swift / Activa / i20"
+                      placeholder={formData.vehicle_type === 'CAR' ? 'Swift / i20 / Nexon' : 'Splendor / Activa / Classic 350'}
                     />
                   </div>
 

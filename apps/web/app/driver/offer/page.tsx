@@ -78,10 +78,15 @@ export default function DriverOfferPage() {
           setIsPendingApproval(true);
         } else {
           // Auto-populate vehicle details from verified driver profile
-          setVehicleMake(res.profile.vehicle_make || 'Maruti Suzuki');
+          const registeredType = (res.profile.vehicle_type as 'CAR' | 'BIKE') || 'CAR';
+          setVehicleType(registeredType);
+          setVehicleMake(res.profile.vehicle_make || (registeredType === 'BIKE' ? 'Hero' : 'Maruti Suzuki'));
           setVehicleModel(res.profile.vehicle_model || '');
           setVehicleColor(res.profile.vehicle_color || 'White');
           setVehicleRegistration(res.profile.vehicle_number || '');
+          if (registeredType === 'BIKE') {
+            setTotalSeats(1);
+          }
         }
       } catch (err) {
         router.push('/driver/onboarding');
@@ -199,7 +204,7 @@ export default function DriverOfferPage() {
         origin: { latitude: parseFloat(originLat), longitude: parseFloat(originLng) },
         destination: { latitude: parseFloat(destLat), longitude: parseFloat(destLng) },
         departure_time: fullDepartureIso,
-        total_seats: totalSeats,
+        total_seats: vehicleType === 'BIKE' ? 1 : totalSeats,
       };
 
       const res = await apiRequest('/rides', {
@@ -326,58 +331,52 @@ export default function DriverOfferPage() {
         {/* STEP 1 — VEHICLE SELECTION */}
         {currentStep === 1 && (
           <Card className="space-y-6 bg-[#12121e]/80 border-white/10 rounded-[28px] p-6 sm:p-8">
-            <div className="border-b border-white/10 pb-4">
+            <div className="border-b border-white/10 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
-                <Car className="w-5 h-5 text-indigo-400" /> Step 1: Vehicle Selection & Seats
+                {vehicleType === 'BIKE' ? (
+                  <Bike className="w-5 h-5 text-purple-400" />
+                ) : (
+                  <Car className="w-5 h-5 text-indigo-400" />
+                )}
+                Step 1: Verified Campus Vehicle & Seats
               </h2>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* Car Option */}
-              <button
-                type="button"
-                onClick={() => setVehicleType('CAR')}
-                className={`p-6 rounded-2xl border flex flex-col items-center gap-3 transition-all duration-300 ${
-                  vehicleType === 'CAR'
-                    ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300 shadow-[0_0_20px_rgba(99,102,241,0.15)] scale-[1.02]'
-                    : 'border-white/10 hover:border-white/20 bg-white/5 text-white/50 hover:bg-white/10'
-                }`}
-              >
-                <Car className="w-8 h-8" />
-                <div className="text-center">
-                  <div className="font-bold">Car Commute</div>
-                  <div className="text-[10px] opacity-80">1 to 6 Seats Available</div>
-                </div>
-              </button>
-
-              {/* Bike Option */}
-              <button
-                type="button"
-                onClick={() => {
-                  setVehicleType('BIKE');
-                  setTotalSeats(1);
-                }}
-                className={`p-6 rounded-2xl border flex flex-col items-center gap-3 transition-all duration-300 ${
-                  vehicleType === 'BIKE'
-                    ? 'border-purple-500/50 bg-purple-500/20 text-purple-300 shadow-[0_0_20px_rgba(168,85,247,0.15)] scale-[1.02]'
-                    : 'border-white/10 hover:border-white/20 bg-white/5 text-white/50 hover:bg-white/10'
-                }`}
-              >
-                <Bike className="w-8 h-8" />
-                <div className="text-center">
-                  <div className="font-bold">Bike Ride</div>
-                  <div className="text-[10px] opacity-80">1 Passenger Seat Max</div>
-                </div>
-              </button>
-            </div>
-
-            {/* Verified Campus Vehicle Notice */}
-            <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-indigo-200">
-              <span className="flex items-center gap-2 font-bold">
-                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                Verified Campus Vehicle (Locked Details)
+              <span className="text-xs text-white/50 flex items-center gap-1">
+                <Lock className="w-3.5 h-3.5 text-indigo-400" />
+                Locked to your verified database profile
               </span>
-              <span className="text-[10px] text-white/50">Auto-filled from approved driver KYC</span>
+            </div>
+
+            {/* Verified Vehicle Card (Locked strictly to driver_profiles.vehicle_type) */}
+            <div className="p-5 rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/5 backdrop-blur-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className={`p-4 rounded-2xl ${vehicleType === 'BIKE' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'} shadow-lg`}>
+                  {vehicleType === 'BIKE' ? <Bike className="w-8 h-8" /> : <Car className="w-8 h-8" />}
+                </div>
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-base font-extrabold text-white">
+                      {vehicleType === 'BIKE' ? 'Registered Vehicle: Bike / Two-Wheeler' : 'Registered Vehicle: Car / Four-Wheeler'}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" /> Admin Approved
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/60">
+                    {vehicleType === 'BIKE'
+                      ? 'Single passenger pillion seat • Motorcycle / Scooter'
+                      : 'Multi-passenger commute • 1 to 6 available seats'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <Link
+                  href="/driver/onboarding"
+                  className="text-xs text-indigo-300 hover:text-indigo-200 underline font-semibold transition"
+                >
+                  Update in KYC Settings
+                </Link>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -434,10 +433,23 @@ export default function DriverOfferPage() {
                 type="number"
                 min={1}
                 max={vehicleType === 'BIKE' ? 1 : 6}
-                value={totalSeats}
-                onChange={(e) => setTotalSeats(Math.min(vehicleType === 'BIKE' ? 1 : 6, Math.max(1, parseInt(e.target.value, 10) || 1)))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold focus:outline-none focus:border-indigo-500 focus:bg-indigo-500/10 transition-all"
+                disabled={vehicleType === 'BIKE'}
+                value={vehicleType === 'BIKE' ? 1 : totalSeats}
+                onChange={(e) => {
+                  if (vehicleType === 'BIKE') return;
+                  setTotalSeats(Math.min(6, Math.max(1, parseInt(e.target.value, 10) || 1)));
+                }}
+                className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold transition-all ${
+                  vehicleType === 'BIKE'
+                    ? 'cursor-not-allowed opacity-80 border-purple-500/30 bg-purple-500/10 text-purple-200'
+                    : 'focus:outline-none focus:border-indigo-500 focus:bg-indigo-500/10'
+                }`}
               />
+              {vehicleType === 'BIKE' && (
+                <p className="text-[11px] text-purple-300/80">
+                  Two-wheeler bike commutes are legally restricted to 1 pillion passenger seat.
+                </p>
+              )}
             </div>
 
             <div className="pt-4 flex justify-end">
@@ -601,7 +613,7 @@ export default function DriverOfferPage() {
                   <div className="space-y-1">
                     <span className="text-white/40">Seat Capacity:</span>
                     <div className="font-bold text-indigo-400">
-                      {totalSeats} Available Passenger Seat(s)
+                      {vehicleType === 'BIKE' ? 1 : totalSeats} Available Passenger Seat(s)
                     </div>
                   </div>
 

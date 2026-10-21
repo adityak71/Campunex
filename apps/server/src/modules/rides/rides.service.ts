@@ -143,24 +143,26 @@ export async function getDriverRides(driverId: string): Promise<Ride[]> {
 
     const query = `
       SELECT 
-        id,
-        driver_id,
-        origin_name,
-        destination_name,
-        COALESCE(ST_Y(origin_geom::geometry), 31.2536) AS origin_lat,
-        COALESCE(ST_X(origin_geom::geometry), 75.7037) AS origin_lng,
-        COALESCE(ST_Y(destination_geom::geometry), 31.3260) AS destination_lat,
-        COALESCE(ST_X(destination_geom::geometry), 75.5762) AS destination_lng,
-        ST_AsGeoJSON(route_geometry) AS route_geometry,
-        departure_time,
-        total_seats,
-        available_seats,
-        status,
-        created_at,
-        updated_at
-      FROM rides
-      WHERE driver_id = $1
-      ORDER BY departure_time DESC;
+        r.id,
+        r.driver_id,
+        r.origin_name,
+        r.destination_name,
+        COALESCE(ST_Y(r.origin_geom::geometry), 31.2536) AS origin_lat,
+        COALESCE(ST_X(r.origin_geom::geometry), 75.7037) AS origin_lng,
+        COALESCE(ST_Y(r.destination_geom::geometry), 31.3260) AS destination_lat,
+        COALESCE(ST_X(r.destination_geom::geometry), 75.5762) AS destination_lng,
+        ST_AsGeoJSON(r.route_geometry) AS route_geometry,
+        r.departure_time,
+        r.total_seats,
+        r.available_seats,
+        r.status,
+        COALESCE(dp.vehicle_type, 'CAR') AS vehicle_type,
+        r.created_at,
+        r.updated_at
+      FROM rides r
+      LEFT JOIN driver_profiles dp ON r.driver_id = dp.user_id
+      WHERE r.driver_id = $1
+      ORDER BY r.departure_time DESC;
     `;
 
     const res = await pool.query(query, [driverId]);
@@ -186,6 +188,7 @@ export async function getDriverRides(driverId: string): Promise<Ride[]> {
         total_seats: row.total_seats,
         available_seats: row.available_seats,
         status: effectiveStatus,
+        vehicle_type: (row.vehicle_type || 'CAR') as 'CAR' | 'BIKE',
         created_at: new Date(row.created_at).toISOString(),
         updated_at: new Date(row.updated_at).toISOString(),
       };
@@ -212,12 +215,14 @@ export async function getRideById(rideId: string): Promise<any> {
       r.total_seats,
       r.available_seats,
       r.status,
+      COALESCE(dp.vehicle_type, 'CAR') AS vehicle_type,
       r.created_at,
       r.updated_at,
       u.name AS driver_name,
       u.verification_status AS driver_verification_status
     FROM rides r
     JOIN users u ON r.driver_id = u.id
+    LEFT JOIN driver_profiles dp ON r.driver_id = dp.user_id
     WHERE r.id = $1;
   `;
   const res = await pool.query(query, [rideId]);
@@ -240,6 +245,7 @@ export async function getRideById(rideId: string): Promise<any> {
     total_seats: row.total_seats,
     available_seats: row.available_seats,
     status: row.status,
+    vehicle_type: (row.vehicle_type || 'CAR') as 'CAR' | 'BIKE',
     created_at: new Date(row.created_at).toISOString(),
     updated_at: new Date(row.updated_at).toISOString(),
   };

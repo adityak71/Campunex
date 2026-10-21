@@ -209,8 +209,17 @@ export default function AdminVerificationPage() {
                         </td>
 
                         <td className="p-3 space-y-1">
-                          <div className="font-mono font-bold text-slate-900 dark:text-cyan-300 uppercase tracking-wider text-xs">
-                            {profile.vehicle_number}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono font-bold text-slate-900 dark:text-cyan-300 uppercase tracking-wider text-xs">
+                              {profile.vehicle_number}
+                            </span>
+                            <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
+                              profile.vehicle_type === 'BIKE'
+                                ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/30'
+                                : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30'
+                            }`}>
+                              {profile.vehicle_type === 'BIKE' ? '🏍️ BIKE' : '🚗 CAR'}
+                            </span>
                           </div>
                           <div className="text-slate-500 text-[11px]">
                             {profile.vehicle_make} {profile.vehicle_model} ({profile.vehicle_color})

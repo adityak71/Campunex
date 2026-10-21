@@ -432,14 +432,21 @@ export default function AdminUsersPage() {
                       </div>
                     </div>
 
-                    <div className="col-span-1 sm:col-span-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 flex justify-between items-center">
+                    <div className="col-span-1 sm:col-span-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                       <div>
-                        <span className="text-[10px] uppercase font-bold text-slate-400">Make & Model</span>
-                        <div className="font-bold text-slate-800 dark:text-slate-100 text-sm">
-                          {selectedUserForReview.vehicle_make} {selectedUserForReview.vehicle_model}
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Vehicle Category & Specs</span>
+                        <div className="font-bold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            selectedUserForReview.vehicle_type === 'BIKE'
+                              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/30'
+                              : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30'
+                          }`}>
+                            {selectedUserForReview.vehicle_type === 'BIKE' ? '🏍️ BIKE' : '🚗 CAR'}
+                          </span>
+                          <span>{selectedUserForReview.vehicle_make} {selectedUserForReview.vehicle_model}</span>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="sm:text-right">
                         <span className="text-[10px] uppercase font-bold text-slate-400">Color</span>
                         <div className="font-bold text-slate-800 dark:text-slate-100 text-sm">
                           {selectedUserForReview.vehicle_color || 'White'}

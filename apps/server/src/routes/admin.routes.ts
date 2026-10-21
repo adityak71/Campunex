@@ -92,6 +92,7 @@ router.get('/users', async (_req: Request, res: Response) => {
               dp.aadhaar_number,
               dp.driving_license_number,
               dp.rc_number,
+              dp.vehicle_type,
               dp.vehicle_number,
               dp.vehicle_make,
               dp.vehicle_model,

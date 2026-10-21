@@ -194,7 +194,7 @@ export default function DriverRidesPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 text-xs bg-white/[0.04] p-3.5 rounded-xl border border-white/5 text-white/80">
-                    <div>Vehicle: <strong className="text-white">Campus Vehicle</strong></div>
+                    <div>Vehicle: <strong className="text-white">{ride.vehicle_type === 'BIKE' ? '🏍️ Bike' : '🚗 Car'}</strong></div>
                     <div>Available Seats: <strong className="text-accent3">{ride.available_seats} / {ride.total_seats} Seats</strong></div>
                     <div>Passenger Requests: <strong className="text-accent1">{requestCounts[ride.id] || 0} Request(s)</strong></div>
                     <div>Proximity: <strong className="text-white/90">500m Match Engine</strong></div>
