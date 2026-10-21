@@ -68,6 +68,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     localStorage.removeItem('campunex_token');
+    localStorage.removeItem('campunex_driver_online');
     setUser(null);
     router.push('/login');
   };

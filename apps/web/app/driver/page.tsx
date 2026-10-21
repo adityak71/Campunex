@@ -48,16 +48,18 @@ export default function DriverDashboardPage() {
   const [driverProfile, setDriverProfile] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Driver Availability State
-  const [isOnline, setIsOnline] = useState(true);
+  // Driver Availability State (Initially OFFLINE)
+  const [isOnline, setIsOnline] = useState(false);
 
   const router = useRouter();
   const { showToast } = useToast();
 
   useEffect(() => {
     const savedOnline = localStorage.getItem('campunex_driver_online');
-    if (savedOnline !== null) {
-      setIsOnline(savedOnline === 'true');
+    if (savedOnline === 'true') {
+      setIsOnline(true);
+    } else {
+      setIsOnline(false);
     }
 
     async function loadDriverData() {
@@ -81,6 +83,12 @@ export default function DriverDashboardPage() {
             return;
           }
           setDriverProfile(profileRes.profile);
+
+          // If driver verification is not approved, force OFFLINE
+          if (profileRes.profile.approval_status !== 'APPROVED') {
+            setIsOnline(false);
+            localStorage.setItem('campunex_driver_online', 'false');
+          }
         } catch (e) {
           // If no profile, redirect to onboarding
           router.push('/driver/onboarding');
@@ -130,6 +138,10 @@ export default function DriverDashboardPage() {
   }, []);
 
   const toggleAvailability = () => {
+    if (driverProfile?.approval_status !== 'APPROVED') {
+      showToast('Account verification pending. You cannot go online until approved.', 'error');
+      return;
+    }
     const nextState = !isOnline;
     setIsOnline(nextState);
     localStorage.setItem('campunex_driver_online', String(nextState));
@@ -250,65 +262,66 @@ export default function DriverDashboardPage() {
           </div>
         )}
 
-        {/* Driver Availability Switch */}
-        {/* Driver Availability Switch */}
-        <Card className={`relative overflow-hidden p-6 sm:p-8 transition-all duration-500 rounded-[32px] ${
-          isOnline
-            ? 'bg-gradient-to-r from-[#171033]/90 to-[#0d1633]/90 border border-indigo-500/30 shadow-[0_8px_32px_rgba(99,102,241,0.2)]'
-            : 'bg-white/5 border border-white/10 shadow-lg'
-        }`}>
-          {isOnline && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[150%] bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none" />
-          )}
-          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="space-y-3 flex-1">
-              <div className="flex items-center gap-3">
-                <div className="relative flex items-center justify-center">
-                  <span className={`w-3.5 h-3.5 rounded-full z-10 ${isOnline ? 'bg-indigo-400 shadow-[0_0_12px_rgba(129,140,248,0.8)]' : 'bg-white/30'}`} />
-                  {isOnline && (
-                    <span className="absolute w-5 h-5 rounded-full bg-indigo-400/40 animate-ping" />
-                  )}
+        {/* Driver Availability Switch — Only displayed when driver KYC is APPROVED */}
+        {driverProfile?.approval_status === 'APPROVED' && (
+          <Card className={`relative overflow-hidden p-6 sm:p-8 transition-all duration-500 rounded-[32px] ${
+            isOnline
+              ? 'bg-gradient-to-r from-[#171033]/90 to-[#0d1633]/90 border border-indigo-500/30 shadow-[0_8px_32px_rgba(99,102,241,0.2)]'
+              : 'bg-white/5 border border-white/10 shadow-lg'
+          }`}>
+            {isOnline && (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[150%] bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none" />
+            )}
+            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div className="space-y-3 flex-1">
+                <div className="flex items-center gap-3">
+                  <div className="relative flex items-center justify-center">
+                    <span className={`w-3.5 h-3.5 rounded-full z-10 ${isOnline ? 'bg-indigo-400 shadow-[0_0_12px_rgba(129,140,248,0.8)]' : 'bg-white/30'}`} />
+                    {isOnline && (
+                      <span className="absolute w-5 h-5 rounded-full bg-indigo-400/40 animate-ping" />
+                    )}
+                  </div>
+                  <h2 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70 tracking-tight">
+                    {isOnline ? "You're available for compatible ride requests" : "You're currently offline"}
+                  </h2>
+                  <Badge variant={isOnline ? 'success' : 'default'} className={!isOnline ? 'bg-white/10 text-white/70 border-white/10' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'}>
+                    {isOnline ? 'ONLINE' : 'OFFLINE'}
+                  </Badge>
                 </div>
-                <h2 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70 tracking-tight">
-                  {isOnline ? "You're available for compatible ride requests" : "You're currently offline"}
-                </h2>
-                <Badge variant={isOnline ? 'success' : 'default'} className={!isOnline ? 'bg-white/10 text-white/70 border-white/10' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'}>
-                  {isOnline ? 'ONLINE' : 'OFFLINE'}
-                </Badge>
+                <p className="text-sm text-white/60 leading-relaxed max-w-2xl font-medium">
+                  {isOnline
+                    ? 'Your published driver routes are visible to campus riders within the 500m proximity engine. Stay alert for incoming requests.'
+                    : 'Toggle online when you are ready to accept rider seat requests on your commute.'}
+                </p>
               </div>
-              <p className="text-sm text-white/60 leading-relaxed max-w-2xl font-medium">
-                {isOnline
-                  ? 'Your published driver routes are visible to campus riders within the 500m proximity engine. Stay alert for incoming requests.'
-                  : 'Toggle online when you are ready to accept rider seat requests on your commute.'}
-              </p>
-            </div>
 
-            <button
-              onClick={toggleAvailability}
-              className={`relative flex items-center p-1.5 w-[92px] h-[48px] rounded-full transition-all duration-500 focus:outline-none shrink-0 ${
-                isOnline ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-white/10'
-              }`}
-              style={{
-                boxShadow: isOnline ? 'inset 0 2px 4px rgba(0,0,0,0.3)' : 'inset 0 2px 4px rgba(0,0,0,0.4)'
-              }}
-            >
-              <motion.div
-                className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-lg"
-                layout
-                animate={{
-                  x: isOnline ? 44 : 0,
-                }}
-                transition={{
-                  type: 'spring',
-                  stiffness: 600,
-                  damping: 25,
+              <button
+                onClick={toggleAvailability}
+                className={`relative flex items-center p-1.5 w-[92px] h-[48px] rounded-full transition-all duration-500 focus:outline-none shrink-0 ${
+                  isOnline ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-white/10'
+                }`}
+                style={{
+                  boxShadow: isOnline ? 'inset 0 2px 4px rgba(0,0,0,0.3)' : 'inset 0 2px 4px rgba(0,0,0,0.4)'
                 }}
               >
-                <Power className={`w-5 h-5 ${isOnline ? 'text-indigo-600' : 'text-white/40'}`} />
-              </motion.div>
-            </button>
-          </div>
-        </Card>
+                <motion.div
+                  className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-lg"
+                  layout
+                  animate={{
+                    x: isOnline ? 44 : 0,
+                  }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 600,
+                    damping: 25,
+                  }}
+                >
+                  <Power className={`w-5 h-5 ${isOnline ? 'text-indigo-600' : 'text-white/40'}`} />
+                </motion.div>
+              </button>
+            </div>
+          </Card>
+        )}
 
         {/* 4 Analytics Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">

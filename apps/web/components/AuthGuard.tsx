@@ -159,6 +159,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('AuthGuard check failed:', error);
         localStorage.removeItem('campunex_token');
+        localStorage.removeItem('campunex_driver_online');
         router.push('/login');
       } finally {
         setLoading(false);
@@ -175,6 +176,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   const handleSwitchAccount = () => {
     localStorage.removeItem('campunex_token');
+    localStorage.removeItem('campunex_driver_online');
     setUnauthorizedMessage(null);
     router.push('/login');
   };

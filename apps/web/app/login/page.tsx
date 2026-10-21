@@ -34,6 +34,7 @@ export default function LoginPage() {
 
       if (res.token) {
         localStorage.setItem('campunex_token', res.token);
+        localStorage.setItem('campunex_driver_online', 'false');
         showToast('Login successful! Redirecting...', 'success');
 
         const role = res.user?.role?.toUpperCase();

@@ -192,6 +192,7 @@ export default function WorkspaceLayout({
 
   const handleLogout = () => {
     localStorage.removeItem('campunex_token');
+    localStorage.removeItem('campunex_driver_online');
     router.push('/login');
   };
 

@@ -33,6 +33,7 @@ export default function BlockedUserModal() {
 
   const handleLogout = () => {
     localStorage.removeItem('campunex_token');
+    localStorage.removeItem('campunex_driver_online');
     setIsBlocked(false);
     window.location.href = '/login';
   };

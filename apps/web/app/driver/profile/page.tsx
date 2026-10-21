@@ -53,6 +53,7 @@ export default function DriverProfilePage() {
 
   const handleLogout = () => {
     localStorage.removeItem('campunex_token');
+    localStorage.removeItem('campunex_driver_online');
     showToast('Logged out successfully', 'info');
     router.push('/login');
   };
